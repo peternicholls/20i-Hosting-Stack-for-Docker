@@ -1,0 +1,174 @@
+#!/bin/bash
+
+# 20i Stack GUI Manager
+# A simple dialog-based interface for managing 20i Docker stacks
+# Usage: 20i-gui
+
+STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+STACK_FILE="$STACK_HOME/docker-compose.yml"
+
+# Check if stack directory exists
+if [[ ! -f "$STACK_FILE" ]]; then
+    echo "❌ Error: Docker compose file not found at $STACK_FILE"
+    exit 1
+fi
+
+# Function to show a menu using dialog or fallback to simple prompts
+show_menu() {
+    if command -v dialog >/dev/null 2>&1; then
+        # Use dialog if available (prettier interface)
+        dialog --clear --title "20i Stack Manager" \
+               --menu "Choose an action:" 15 50 4 \
+               1 "🚀 Start Stack (current directory)" \
+               2 "🛑 Stop Stack" \
+               3 "📊 View Status" \
+               4 "📋 View Logs" 2>/tmp/menu_choice
+        
+        if [[ $? -eq 0 ]]; then
+            choice=$(cat /tmp/menu_choice)
+            rm -f /tmp/menu_choice
+        else
+            clear
+            exit 0
+        fi
+    else
+        # Fallback to simple text menu
+        echo "🚀 20i Stack Manager"
+        echo "=================="
+        echo "1) 🚀 Start Stack (current directory)"
+        echo "2) 🛑 Stop Stack"
+        echo "3) 📊 View Status"
+        echo "4) 📋 View Logs"
+        echo "q) Quit"
+        echo
+        read -p "Choose an option: " choice
+        
+        if [[ "$choice" == "q" ]]; then
+            exit 0
+        fi
+    fi
+    
+    case $choice in
+        1) start_stack ;;
+        2) stop_stack ;;
+        3) view_status ;;
+        4) view_logs ;;
+        *) echo "❌ Invalid choice"; exit 1 ;;
+    esac
+}
+
+# Function to start stack
+start_stack() {
+    local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    
+    echo "🚀 Starting 20i stack for project: $PROJECT_NAME"
+    echo "📁 Code directory: $PROJECT_DIR"
+    
+    # Check for local overrides
+    if [[ -f .20i-local ]]; then
+        echo "📝 Loading local configuration from .20i-local"
+        source .20i-local
+    fi
+    
+    # Set environment variables
+    export COMPOSE_PROJECT_NAME="$PROJECT_NAME"
+    export CODE_DIR="$PROJECT_DIR"
+    
+    # Ask for custom port if not set
+    if [[ -z "$HOST_PORT" ]]; then
+        read -p "🌐 Web port (default 80): " input_port
+        export HOST_PORT="${input_port:-80}"
+    fi
+    
+    echo "🐳 Starting containers..."
+    if docker compose -f "$STACK_FILE" up -d; then
+        echo "✅ Stack started successfully!"
+        echo "🌐 Website: http://localhost:${HOST_PORT:-80}"
+        echo "🔧 phpMyAdmin: http://localhost:${PMA_PORT:-8081}"
+        echo "📊 Database: localhost:${MYSQL_PORT:-3306}"
+    else
+        echo "❌ Failed to start stack"
+        exit 1
+    fi
+}
+
+# Function to stop stack
+stop_stack() {
+    # Get list of running compose projects
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    
+    if [[ -z "$running_projects" ]]; then
+        echo "ℹ️  No 20i stacks appear to be running"
+        return 0
+    fi
+    
+    echo "🛑 Running 20i stacks:"
+    echo "$running_projects" | nl
+    echo
+    
+    read -p "Enter project number to stop (or 'a' for all): " choice
+    
+    if [[ "$choice" == "a" ]]; then
+        echo "🛑 Stopping all 20i stacks..."
+        echo "$running_projects" | while read project; do
+            if [[ -n "$project" ]]; then
+                echo "Stopping $project..."
+                COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" down
+            fi
+        done
+    else
+        local project=$(echo "$running_projects" | sed -n "${choice}p")
+        if [[ -n "$project" ]]; then
+            echo "🛑 Stopping stack: $project"
+            COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" down
+            echo "✅ Stack stopped: $project"
+        else
+            echo "❌ Invalid selection"
+            exit 1
+        fi
+    fi
+}
+
+# Function to view status
+view_status() {
+    echo "📊 20i Stack Status"
+    echo "=================="
+    echo
+    echo "🐳 All running containers:"
+    docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | head -20
+    echo
+    echo "📈 Docker Compose projects:"
+    docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u | nl
+}
+
+# Function to view logs
+view_logs() {
+    # Get list of running compose projects
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    
+    if [[ -z "$running_projects" ]]; then
+        echo "ℹ️  No 20i stacks appear to be running"
+        return 0
+    fi
+    
+    echo "📋 Running 20i stacks:"
+    echo "$running_projects" | nl
+    echo
+    
+    read -p "Enter project number to view logs: " choice
+    
+    local project=$(echo "$running_projects" | sed -n "${choice}p")
+    if [[ -n "$project" ]]; then
+        echo "📋 Viewing logs for: $project (Press Ctrl+C to stop)"
+        COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" logs -f
+    else
+        echo "❌ Invalid selection"
+        exit 1
+    fi
+}
+
+# Main execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    show_menu
+fi

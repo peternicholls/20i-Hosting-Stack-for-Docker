@@ -1,0 +1,50 @@
+# Environment files
+.env
+.20i-local
+
+# Docker volumes
+db_data/
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Backup files
+*.bak
+*.backup
+
+# Cache directories
+cache/
+.cache/
+
+# Node modules (if present)
+node_modules/
+
+# Compiled assets
+dist/
+build/
+
+# Test files
+test-site/
+demo-site/
