@@ -13,9 +13,34 @@ else
     STACK_FILE="$STACK_HOME/docker-compose.yml"
 fi
 
+# Function to sanitize project names for Docker Compose
+sanitize_project_name() {
+    local name="$1"
+    # Lowercase
+    name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
+    # Replace any sequence of invalid chars with single hyphen
+    name="$(echo "$name" | sed -E 's/[^a-z0-9]+/-/g')"
+    # Collapse consecutive hyphens/underscores into single hyphen
+    name="$(echo "$name" | sed -E 's/[-_]+/-/g')"
+    # Trim leading/trailing hyphens using parameter expansion
+    name="${name##-}"
+    name="${name%%-}"
+    # Ensure it starts with a letter or number
+    if [[ ! "$name" =~ ^[a-z0-9] ]]; then
+        name="p${name}"
+    fi
+    # Fallback
+    if [[ -z "$name" ]]; then
+        name="project"
+    fi
+    echo "$name"
+}
+
 # Function to start 20i stack
 20i-up() {
     local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     # Check if stack directory exists
@@ -24,15 +49,18 @@ fi
         return 1
     fi
     
+    echo "🚀 Starting 20i stack for project: $PROJECT_NAME"
+    if [[ "$SAFE_PROJECT_NAME" != "$PROJECT_NAME" ]]; then
+        echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
+    fi
+    echo "📁 Code directory: $CODE_DIR"
+    
     # Set project name based on current directory
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
     export CODE_DIR="$PROJECT_DIR"
     
     # Source optional per-project overrides
     [[ -f .20i-local ]] && source .20i-local
-    
-    echo "🚀 Starting 20i stack for project: $COMPOSE_PROJECT_NAME"
-    echo "📁 Code directory: $CODE_DIR"
     
     docker compose -f "$STACK_FILE" up -d "$@"
 }
@@ -40,6 +68,8 @@ fi
 # Function to stop 20i stack
 20i-down() {
     local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     if [[ ! -f "$STACK_FILE" ]]; then
@@ -49,7 +79,7 @@ fi
     
     # Export CODE_DIR to satisfy docker-compose.yml requirements
     export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
     
     echo "🛑 Stopping 20i stack..."
     docker compose -f "$STACK_FILE" down "$@"
@@ -58,6 +88,8 @@ fi
 # Function to show 20i stack status
 20i-status() {
     local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     if [[ ! -f "$STACK_FILE" ]]; then
@@ -67,7 +99,7 @@ fi
     
     # Export CODE_DIR to satisfy docker-compose.yml requirements
     export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
     
     echo "📊 20i stack status:"
     docker compose -f "$STACK_FILE" ps
@@ -76,6 +108,8 @@ fi
 # Function to view 20i stack logs
 20i-logs() {
     local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     if [[ ! -f "$STACK_FILE" ]]; then
@@ -85,7 +119,7 @@ fi
     
     # Export CODE_DIR to satisfy docker-compose.yml requirements
     export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
     
     docker compose -f "$STACK_FILE" logs -f "$@"
 }
