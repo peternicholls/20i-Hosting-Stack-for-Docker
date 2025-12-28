@@ -133,6 +133,14 @@ dcu                    # Start stack for new project
 
 ## Troubleshooting
 
+### Project name normalization
+
+If your project folder name contains spaces, uppercase letters, or other characters that Docker Compose disallows, the CLI will automatically normalize it into a safe project name. Names are converted to lowercase, invalid characters are replaced with hyphens, multiple separators are collapsed, and a leading letter is ensured if needed. For example:
+
+- `DEV BirminghamFilms` → `dev-birminghamfilms`
+
+The normalized project name will be shown when the stack starts.
+
 ### Port Conflicts
 ```bash
 # Use custom port

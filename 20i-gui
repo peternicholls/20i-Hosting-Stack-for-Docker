@@ -18,11 +18,12 @@ show_menu() {
     if command -v dialog >/dev/null 2>&1; then
         # Use dialog if available (prettier interface)
         dialog --clear --title "20i Stack Manager" \
-               --menu "Choose an action:" 15 50 4 \
+               --menu "Choose an action:" 15 50 5 \
                1 "🚀 Start Stack (current directory)" \
                2 "🛑 Stop Stack" \
-               3 "📊 View Status" \
-               4 "📋 View Logs" 2>/tmp/menu_choice
+               3 "🔁 Restart Stack" \
+               4 "📊 View Status" \
+               5 "📋 View Logs" 2>/tmp/menu_choice
         
         if [[ $? -eq 0 ]]; then
             choice=$(cat /tmp/menu_choice)
@@ -37,8 +38,9 @@ show_menu() {
         echo "=================="
         echo "1) 🚀 Start Stack (current directory)"
         echo "2) 🛑 Stop Stack"
-        echo "3) 📊 View Status"
-        echo "4) 📋 View Logs"
+        echo "3) � Restart Stack"
+        echo "4) 📊 View Status"
+        echo "5) 📋 View Logs"
         echo "q) Quit"
         echo
         read -p "Choose an option: " choice
@@ -51,18 +53,96 @@ show_menu() {
     case $choice in
         1) start_stack ;;
         2) stop_stack ;;
-        3) view_status ;;
-        4) view_logs ;;
+        3) restart_stack ;;
+        4) view_status ;;
+        5) view_logs ;;
         *) echo "❌ Invalid choice"; exit 1 ;;
     esac
+}
+
+# Function to sanitize project names for Docker Compose
+sanitize_project_name() {
+    local name="$1"
+    # Lowercase
+    name="$(echo "$name" | tr '[:upper:]' '[:lower:]')"
+    # Replace any sequence of invalid chars with single hyphen
+    name="$(echo "$name" | sed -E 's/[^a-z0-9]+/-/g')"
+    # Collapse consecutive hyphens/underscores into single hyphen
+    name="$(echo "$name" | sed -E 's/[-_]+/-/g')"
+    # Trim leading/trailing hyphens using parameter expansion
+    name="${name##-}"
+    name="${name%%-}"
+    # Ensure it starts with a letter or number
+    if [[ ! "$name" =~ ^[a-z0-9] ]]; then
+        name="p${name}"
+    fi
+    # Fallback
+    if [[ -z "$name" ]]; then
+        name="project"
+    fi
+    echo "$name"
+}
+
+# Function to get process info for a listening TCP port (macOS-compatible)
+get_port_info() {
+    local p="$1"
+    # lsof prints a header; we want the first listening process entry
+    # Format: COMMAND PID ...
+    local info
+    info=$(lsof -nP -iTCP:"$p" -sTCP:LISTEN 2>/dev/null | awk 'NR==2{printf "%s (pid %s)", $1, $2}')
+    echo "$info"
+}
+
+# Function to show port availability for some common ranges
+show_port_choices() {
+    local ranges=("80-90" "8080-8090" "3000-3010")
+    echo "🌐 Port availability (free / in-use):"
+    for r in "${ranges[@]}"; do
+        IFS=- read -r start end <<< "$r"
+        echo " Range ${start}-${end}:"
+        for ((p=start; p<=end; p++)); do
+            local info
+            info=$(get_port_info "$p")
+            if [[ -n "$info" ]]; then
+                printf "  %3d: in use - %s\n" "$p" "$info"
+            else
+                printf "  %3d: free\n" "$p"
+            fi
+        done
+    done
+    echo
+}
+
+# Find a free port from common ranges (falls back to high ephemeral ports)
+find_free_port() {
+    local ranges=("80-90" "8080-8090" "3000-3010")
+    for r in "${ranges[@]}"; do
+        IFS=- read -r start end <<< "$r"
+        for ((p=start; p<=end; p++)); do
+            if [[ -z "$(get_port_info "$p")" ]]; then
+                echo "$p"; return 0
+            fi
+        done
+    done
+    # Fallback: pick a random ephemeral port (49152–65535) that's free
+    while true; do
+        p=$(( (RANDOM % 16384) + 49152 ))
+        if [[ -z "$(get_port_info "$p")" ]]; then
+            echo "$p"; return 0
+        fi
+    done
 }
 
 # Function to start stack
 start_stack() {
     local PROJECT_DIR="$(pwd)"
     local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
     
     echo "🚀 Starting 20i stack for project: $PROJECT_NAME"
+    if [[ "$SAFE_PROJECT_NAME" != "$PROJECT_NAME" ]]; then
+        echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
+    fi
     echo "📁 Code directory: $PROJECT_DIR"
     
     # Check for local overrides
@@ -72,13 +152,32 @@ start_stack() {
     fi
     
     # Set environment variables
-    export COMPOSE_PROJECT_NAME="$PROJECT_NAME"
+    export COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME"
     export CODE_DIR="$PROJECT_DIR"
     
     # Ask for custom port if not set
     if [[ -z "$HOST_PORT" ]]; then
-        read -p "🌐 Web port (default 80): " input_port
-        export HOST_PORT="${input_port:-80}"
+        show_port_choices
+        echo "ℹ️  Leave blank to auto-select a free port from the shown ranges."
+        while true; do
+            read -p "🌐 Web port (default 80 — leave blank to auto-pick): " input_port
+            if [[ -z "$input_port" ]]; then
+                HOST_PORT="$(find_free_port)"
+                echo "ℹ️  Auto-selected free port: $HOST_PORT"
+                break
+            fi
+            if ! [[ "$input_port" =~ ^[0-9]+$ ]]; then
+                echo "❌ Invalid port number. Try again."
+                continue
+            fi
+            if [[ -n "$(get_port_info "$input_port")" ]]; then
+                echo "❌ Port $input_port appears to be in use. Choose another."
+                continue
+            fi
+            HOST_PORT="$input_port"
+            break
+        done
+        export HOST_PORT
     fi
     
     echo "🐳 Starting containers..."
@@ -127,6 +226,27 @@ stop_stack() {
             echo "❌ Invalid selection"
             exit 1
         fi
+    fi
+}
+
+# Function to restart the current project's stack
+restart_stack() {
+    local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
+
+    echo "🔁 Restarting 20i stack for project: $PROJECT_NAME"
+    if [[ "$SAFE_PROJECT_NAME" != "$PROJECT_NAME" ]]; then
+        echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
+    fi
+
+    # Check if the project has running containers
+    if [[ -n "$(COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" ps -q 2>/dev/null)" ]]; then
+        echo "♻️  Project appears to be running — restarting containers..."
+        COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" restart && echo "✅ Restarted: $SAFE_PROJECT_NAME" || echo "❌ Restart failed"
+    else
+        echo "⬇️  Project not running — starting stack..."
+        COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" up -d && echo "✅ Started: $SAFE_PROJECT_NAME" || echo "❌ Start failed"
     fi
 }
 
