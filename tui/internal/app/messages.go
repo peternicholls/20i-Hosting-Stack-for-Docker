@@ -6,6 +6,8 @@
 
 package app
 
+import "github.com/peternicholls/20i-stack/tui/internal/stack"
+
 // StatsMsg sent when container stats are updated
 type StatsMsg struct {
 	Timestamp int64
@@ -117,4 +119,10 @@ type StackStatusMsg struct {
 	Success   bool   // True if operation succeeded
 	Message   string // Human-readable status message
 	Error     error  // Error if operation failed
+}
+
+// StackContainersMsg sent when container list with URLs and CPU% is retrieved
+type StackContainersMsg struct {
+	Containers []stack.ContainerInfo // List of container information
+	Error      error                 // Error if retrieval failed
 }
