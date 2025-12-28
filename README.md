@@ -1,10 +1,16 @@
 # 20i Stack - Docker Development Environment
-**A reusable Docker stack based on [20i's](https://www.20i.com) shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
+**A reusable, multi-platform Docker stack based on [20i's](https://www.20i.com) shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
+
+Works great on Intel/AMD and Apple Silicon (ARM64). Choose ARM-native phpMyAdmin for best performance on Apple Silicon, or the cross-platform image for universal compatibility.
+
 **Perfect for**: PHP development, Laravel projects, WordPress development, prototyping, and any web project needing a quick, reliable development environment.
 
+## Topics
+docker, docker-compose, php, php-fpm, nginx, mariadb, phpmyadmin, apple-silicon, arm64, cross-platform, development-environment, macos
+
 ## Overview
-A reusable, centralized Docker development stack for PHP projects using:
-- **PHP 8.4** with FPM on Alpine Linux
+ A reusable, centralized Docker development stack for PHP projects using:
+ - **PHP 8.5** with FPM on Alpine Linux
 - **Nginx** as reverse proxy
 - **MariaDB** for database
 - **phpMyAdmin** for database management
@@ -55,11 +61,34 @@ docker compose up -d
 ### Global Settings (.env.example)
 ```bash
 HOST_PORT=80
-PHP_VERSION=8.4
+PHP_VERSION=8.5
 MYSQL_VERSION=10.6
 MYSQL_PORT=3306
 PMA_PORT=8081
 ```
+
+### Central Variables (config/stack-vars.yml)
+- Define shared defaults in `config/stack-vars.yml`. Scripts read these values and export them if not already set by `.env` or `.20i-local`.
+- Supported keys:
+	- `PHP_VERSION` (e.g., `PHP_VERSION: "8.5"`)
+	- `MYSQL_VERSION` (e.g., `MYSQL_VERSION: "10.6"`)
+	- `PMA_IMAGE` (e.g., `PMA_IMAGE: "phpmyadmin/phpmyadmin:latest"`)
+- Override via `.env`, `.20i-local`, or environment variables as needed.
+
+### phpMyAdmin Architecture (ARM vs Cross‑Platform)
+- **Default (Cross‑Platform):** Uses `phpmyadmin/phpmyadmin:latest` and works on all architectures.
+- **Apple Silicon/ARM (Recommended):** Set `PMA_IMAGE=arm64v8/phpmyadmin:latest` for native ARM performance.
+
+You can set this in your `.env`:
+```bash
+# Cross‑platform (default)
+PMA_IMAGE=phpmyadmin/phpmyadmin:latest
+
+# Apple Silicon/ARM (native)
+# PMA_IMAGE=arm64v8/phpmyadmin:latest
+```
+
+Or select it via the GUI when starting the stack.
 
 ### Per-Project Settings (.20i-local)
 Create in your project root:
@@ -83,7 +112,7 @@ export MYSQL_PASSWORD=projectpass
 20i-stack/
 ├── docker/
 │   ├── apache/
-│   │   ├── Dockerfile          # PHP 8.4 + extensions
+│   │   ├── Dockerfile          # PHP 8.5 + extensions
 │   │   └── php.ini            # PHP configuration
 │   └── nginx.conf.tmpl        # Nginx reverse proxy config
 ├── docker-compose.yml         # Main stack definition

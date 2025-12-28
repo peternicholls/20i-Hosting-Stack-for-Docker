@@ -53,6 +53,31 @@ _20i_setup_project_env() {
     # Export environment variables
     export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
     export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
+
+    # Load central YAML variables if present and not already set
+    if [[ -f "$STACK_HOME/config/stack-vars.yml" ]]; then
+        if [[ -z "${PHP_VERSION:-}" ]]; then
+            local php_from_yaml
+            php_from_yaml=$(awk -F': ' '/^PHP_VERSION:/ {print $2}' "$STACK_HOME/config/stack-vars.yml" | tr -d '"' | tr -d "'" | tr -d ' ')
+            if [[ -n "$php_from_yaml" ]]; then
+                export PHP_VERSION="$php_from_yaml"
+            fi
+        fi
+        if [[ -z "${MYSQL_VERSION:-}" ]]; then
+            local mysql_from_yaml
+            mysql_from_yaml=$(awk -F': ' '/^MYSQL_VERSION:/ {print $2}' "$STACK_HOME/config/stack-vars.yml" | tr -d '"' | tr -d "'" | tr -d ' ')
+            if [[ -n "$mysql_from_yaml" ]]; then
+                export MYSQL_VERSION="$mysql_from_yaml"
+            fi
+        fi
+        if [[ -z "${PMA_IMAGE:-}" ]]; then
+            local pma_from_yaml
+            pma_from_yaml=$(awk -F': ' '/^PMA_IMAGE:/ {print $2}' "$STACK_HOME/config/stack-vars.yml" | tr -d '"')
+            if [[ -n "$pma_from_yaml" ]]; then
+                export PMA_IMAGE="$pma_from_yaml"
+            fi
+        fi
+    fi
     
     # Store values for functions to access
     _20I_PROJECT_NAME="$PROJECT_NAME"
@@ -72,6 +97,13 @@ _20i_setup_project_env() {
         echo "📛 Normalized project name: $_20I_SAFE_PROJECT_NAME"
     fi
     echo "📁 Code directory: $CODE_DIR"
+    echo "⚙️  Effective configuration:"
+    echo "  PHP_VERSION=${PHP_VERSION:-(default)}"
+    echo "  MYSQL_VERSION=${MYSQL_VERSION:-(default)}"
+    echo "  PMA_IMAGE=${PMA_IMAGE:-(default from compose)}"
+    echo "  HOST_PORT=${HOST_PORT:-80}"
+    echo "  MYSQL_PORT=${MYSQL_PORT:-3306}"
+    echo "  PMA_PORT=${PMA_PORT:-8081}"
     
     docker compose -f "$STACK_FILE" up -d "$@"
 }

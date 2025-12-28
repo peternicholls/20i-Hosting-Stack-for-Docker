@@ -37,6 +37,9 @@ on startStack()
         # Get project name for display
         set projectName to basename(projectPath)
         
+        # Ask for phpMyAdmin image architecture
+        set pmaChoice to choose from list {"Cross-platform (default)", "ARM-native (Apple Silicon)"} with title "phpMyAdmin Architecture" with prompt "Choose phpMyAdmin image type:" default items {"Cross-platform (default)"}
+
         # Ask for custom settings
         set settingsDialog to display dialog "⚙️ Custom settings (optional):" default answer "HOST_PORT=80" with title "20i Stack Settings" buttons {"Skip", "Use Settings"} default button "Skip"
         
@@ -51,6 +54,26 @@ on startStack()
         
         if customSettings is not "" then
             set shellScript to shellScript & "export " & customSettings & ";" & return
+        end if
+
+        # Define STACK_HOME for central YAML lookup
+        set shellScript to shellScript & "STACK_HOME=\"${STACK_HOME:-$HOME/docker/20i-stack}\";" & return
+
+        # Load defaults from central YAML if not set
+        set shellScript to shellScript & "if [ -f \"$STACK_HOME/config/stack-vars.yml\" ]; then" & return
+        set shellScript to shellScript & "  if [ -z \"$PHP_VERSION\" ]; then PHP_VERSION=\"$(awk -F': ' '/^PHP_VERSION:/ {print $2}' \"$STACK_HOME/config/stack-vars.yml\" | tr -d '\"' | tr -d " & quoted form of "'" & " | tr -d ' ')\"; export PHP_VERSION; fi;" & return
+        set shellScript to shellScript & "  if [ -z \"$MYSQL_VERSION\" ]; then MYSQL_VERSION=\"$(awk -F': ' '/^MYSQL_VERSION:/ {print $2}' \"$STACK_HOME/config/stack-vars.yml\" | tr -d '\"' | tr -d " & quoted form of "'" & " | tr -d ' ')\"; export MYSQL_VERSION; fi;" & return
+        set shellScript to shellScript & "  if [ -z \"$PMA_IMAGE\" ]; then PMA_IMAGE=\"$(awk -F': ' '/^PMA_IMAGE:/ {print $2}' \"$STACK_HOME/config/stack-vars.yml\" | tr -d '\"')\"; export PMA_IMAGE; fi;" & return
+        set shellScript to shellScript & "fi;" & return
+
+        # Apply phpMyAdmin image choice
+        if pmaChoice is not false then
+            set pmaSelection to item 1 of pmaChoice
+            if pmaSelection = "ARM-native (Apple Silicon)" then
+                set shellScript to shellScript & "export PMA_IMAGE=arm64v8/phpmyadmin:latest;" & return
+            else
+                set shellScript to shellScript & "export PMA_IMAGE=phpmyadmin/phpmyadmin:latest;" & return
+            end if
         end if
         
         set shellScript to shellScript & "export COMPOSE_PROJECT_NAME='" & projectName & "';" & return

@@ -1,5 +1,5 @@
 # PHP-FPM Docker Image for 20i-style hosting
-ARG PHP_VERSION=8.4
+ARG PHP_VERSION=8.5
 FROM php:${PHP_VERSION}-fpm-alpine
 
 # Install common PHP extensions found in shared hosting
@@ -18,17 +18,17 @@ RUN apk add --no-cache \
     make \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
-        gd \
-        mysqli \
-        pdo_mysql \
-        zip \
-        curl \
-        mbstring \
-        exif \
-        bcmath \
-        opcache
+    gd \
+    mysqli \
+    pdo_mysql \
+    zip \
+    curl \
+    mbstring \
+    exif \
+    bcmath \
+    opcache
 
-# Note: fileinfo and iconv are already built into PHP 8.4
+# Note: fileinfo and iconv are already built into PHP 8.5
 # No need to install them separately
 
 # Copy custom PHP configuration

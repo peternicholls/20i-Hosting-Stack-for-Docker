@@ -12,7 +12,7 @@ services:
     build:
       context: ./docker/apache
       args:
-        PHP_VERSION: ${PHP_VERSION:-8.4}
+        PHP_VERSION: ${PHP_VERSION:-8.5}
     expose: ["9000"]
     volumes:
       - ${CODE_DIR:?err}:/var/www/site
@@ -29,7 +29,9 @@ services:
     ports: ["${MYSQL_PORT:-3306}:3306"]
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    # For Apple Silicon/ARM: set PMA_IMAGE=arm64v8/phpmyadmin:latest in .env for better performance
+    # Default uses cross-platform image that works on all architectures
+    image: ${PMA_IMAGE:-phpmyadmin/phpmyadmin:latest}
     environment:
       PMA_HOST: mariadb
     ports: ["${PMA_PORT:-8081}:80"]

@@ -16,6 +16,9 @@ This gives you an interactive menu with these options:
    - Uses the current directory as your project root
    - Auto-detects project name from folder name
    - Prompts for custom web port (defaults to 80)
+   - Lets you choose phpMyAdmin image type:
+     - Cross‑platform (default): `phpmyadmin/phpmyadmin:latest`
+     - ARM‑native (Apple Silicon): `arm64v8/phpmyadmin:latest`
    - Loads `.20i-local` file if present for project-specific settings
 
 2. **🛑 Stop Stack**
@@ -59,6 +62,15 @@ Your existing aliases still work perfectly:
   export HOST_PORT=8080
   export MYSQL_DATABASE=myproject_db
   ```
+
+- **phpMyAdmin Architecture**: You can override selection via environment:
+   ```bash
+   # Cross‑platform (default)
+   export PMA_IMAGE=phpmyadmin/phpmyadmin:latest
+
+   # Apple Silicon / ARM (native)
+   export PMA_IMAGE=arm64v8/phpmyadmin:latest
+   ```
 
 - **From Anywhere**: The `20i-gui` command works from any project directory
 

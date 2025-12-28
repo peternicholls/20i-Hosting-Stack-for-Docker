@@ -1,0 +1,9 @@
+# Central stack variables (simple YAML: key: value)
+# Extend as needed for other defaults (e.g., PMA_IMAGE)
+
+PHP_VERSION: "8.5"
+# Default phpMyAdmin image (cross-platform). ARM-native can be selected via GUI or env override.
+PMA_IMAGE: "phpmyadmin/phpmyadmin:latest"
+
+# Default MariaDB version
+MYSQL_VERSION: "10.6"
