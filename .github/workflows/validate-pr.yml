@@ -42,6 +42,7 @@ jobs:
                       doesn't start with an uppercase character.
 
             - name: Lint shell scripts
+              if: hashFiles('scripts/**/*.sh') != ''
               uses: ludeeus/action-shellcheck@master
               with:
                   scandir: "./scripts"

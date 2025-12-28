@@ -75,5 +75,45 @@ scripts/release/validate.sh --all      # Run all validations
   - Release artifacts with SHA256 checksums
 
 <!-- MANUAL ADDITIONS START -->
-<!-- Add project-specific instructions below this line -->
+## Copilot Coding Agent Rules (High Priority)
+
+These rules are written for GitHub Copilot Coding Agent. Follow them exactly.
+
+### Scope and safety
+- Treat the GitHub Issue description as the task contract.
+- Only modify files explicitly listed in the Issue under “Files to create/modify”. If the Issue does not list files, stop and ask for clarification in the PR description.
+- Do not implement out-of-scope features, “future phases”, refactors, or drive-by cleanups.
+- Keep PRs small and reviewable: one work packet per PR.
+
+### TUI development rules (001-stack-manager-tui)
+- Work inside `tui/` for all TUI tasks unless the Issue explicitly includes non-TUI paths.
+- Bubble Tea Elm Architecture:
+  - Never block in `Update()`.
+  - All I/O must be performed via `tea.Cmd`.
+  - UI rendering must be a pure `View()` function.
+- Styling:
+  - Use Lipgloss for all styling.
+  - Do not use raw ANSI codes.
+- Paths and configuration:
+  - Never hard-code paths to `docker-compose.yml`.
+  - Always use environment-driven configuration (`STACK_FILE`, `STACK_HOME`) with executable-relative fallback detection.
+  - Validate the stack file exists before any compose operation.
+- Platform:
+  - Use `runtime.GOARCH` for architecture decisions.
+  - Use ARM64-native phpMyAdmin image on ARM, default image on x86, with env override.
+
+### Quality gates
+- Add or update tests for all non-trivial logic (table-driven tests preferred).
+- Run these commands before marking a PR ready:
+  - From `tui/`: `go test ./...`
+  - If a Makefile target exists for tests, run it too.
+- Ensure all exported Go symbols you add or modify have godoc comments.
+- Prefer clear, user-friendly error messages (avoid surfacing raw Docker errors directly to the UI).
+
+### PR completion checklist
+Include a short checklist in the PR description:
+- [ ] Tests: `go test ./...` (from `tui/`) passed
+- [ ] Scope limited to the Issue
+- [ ] Godoc added for exported symbols
+- [ ] User-visible errors are friendly
 <!-- MANUAL ADDITIONS END -->

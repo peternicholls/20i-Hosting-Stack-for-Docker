@@ -6,6 +6,17 @@
 **Priority**: 🟢 Medium  
 **Input**: User description: "Add more stack variables to config/stack-vars.yml for network, ports, database, and optional services"
 
+## Configuration Precedence *(mandatory)*
+
+When the system resolves configuration values, it MUST apply precedence in this order:
+
+1. **Process environment** (explicit `export VAR=...` in the user’s shell)
+2. **Project-local overrides** (`.env` and/or `.20i-local` if supported by the stack)
+3. **Central defaults** (`config/stack-vars.yml`)
+4. **Hardcoded defaults** (only when the above do not define a value)
+
+If multiple sources define the same key, the higher-precedence source MUST win.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Configure Network Ports Centrally (Priority: P1)
@@ -21,6 +32,14 @@ As a developer, I want to set default port mappings in a central configuration f
 1. **Given** `HOST_PORT: "8080"` in `stack-vars.yml`, **When** the stack starts without local override, **Then** the web server listens on port 8080
 2. **Given** `MYSQL_PORT: "3307"` in `stack-vars.yml`, **When** the stack starts, **Then** MariaDB is accessible on port 3307
 3. **Given** `PMA_PORT: "8082"` in `stack-vars.yml`, **When** the stack starts, **Then** phpMyAdmin is accessible on port 8082
+
+#### Port resolution contract
+
+- Ports MUST be treated as integers in the range 1–65535.
+- If a port is configured as a string in YAML (e.g. `"8080"`), the system MUST still parse it as a port number.
+- If an invalid port is configured, the system MUST:
+  - Refuse to start the stack
+  - Return an actionable error message that identifies the invalid key and value
 
 ---
 
@@ -38,6 +57,12 @@ As a developer, I want to configure default database credentials centrally so th
 2. **Given** `MYSQL_USER: "appuser"` and `MYSQL_PASSWORD: "secret"` in `stack-vars.yml`, **When** the stack starts, **Then** the user "appuser" can authenticate with password "secret"
 3. **Given** a project `.env` overrides `MYSQL_DATABASE`, **When** the stack starts, **Then** the local override takes precedence
 
+#### Credentials and security notes
+
+- The central YAML file is intended for local development defaults.
+- The system MUST support local overrides for credentials per project.
+- Documentation MUST warn users not to commit real production secrets into `stack-vars.yml`.
+
 ---
 
 ### User Story 3 - Toggle Optional Services (Priority: P3)
@@ -54,14 +79,26 @@ As a developer, I want to enable or disable optional services like Redis and Mai
 2. **Given** `ENABLE_REDIS: true`, **When** the stack starts, **Then** Redis container starts and is accessible on port 6379
 3. **Given** `ENABLE_MAILHOG: true`, **When** the stack starts, **Then** Mailhog container starts with SMTP on 1025 and UI on 8025
 
+#### Optional services contract
+
+- Optional services MUST be disabled by default.
+- Enabling an optional service MUST:
+  - Start the service container
+  - Expose documented ports
+  - Integrate cleanly with `docker compose down` teardown
+- Disabling an optional service MUST ensure it is not started, and does not leave orphaned containers.
+
 ---
 
 ### Edge Cases
 
-- What happens when `stack-vars.yml` contains invalid YAML syntax?
-- How does the system handle missing optional variables (should use hardcoded defaults)?
-- What happens when a port number is outside valid range (1-65535)?
-- How does the system behave when `stack-vars.yml` is missing entirely?
+- Invalid YAML syntax in `stack-vars.yml` (must produce a clear parse error)
+- `stack-vars.yml` missing entirely (must fall back to hardcoded defaults)
+- Missing keys in `stack-vars.yml` (must fall back to hardcoded defaults for those keys)
+- Port number outside valid range (1–65535) (must refuse to start with actionable error)
+- Key present but empty string (must treat as missing and fall back)
+- Boolean toggles specified as strings (e.g. `"true"`) (must parse correctly)
+- Unknown keys present (must ignore safely, but SHOULD warn in logs)
 
 ## Requirements *(mandatory)*
 
@@ -72,6 +109,8 @@ As a developer, I want to enable or disable optional services like Redis and Mai
 - **FR-003**: System MUST read optional service toggles (`ENABLE_REDIS`, `ENABLE_MAILHOG`) from `config/stack-vars.yml`
 - **FR-004**: Local `.env` file values MUST override central YAML defaults
 - **FR-005**: System MUST provide sensible hardcoded defaults when YAML variables are missing
+- **FR-005a**: System MUST validate YAML types and coerce common representations safely (e.g. numeric strings for ports, string booleans for toggles)
+- **FR-005b**: On invalid YAML or invalid values, system MUST fail fast with an actionable error including key name and value
 - **FR-006**: System MUST validate port numbers are within valid range (1-65535)
 - **FR-007**: Documentation MUST be updated to list all available configuration variables
 - **FR-008**: System MUST maintain backward compatibility with existing `.env` files
@@ -81,6 +120,12 @@ As a developer, I want to enable or disable optional services like Redis and Mai
 - **Stack Variables**: Central configuration stored in `config/stack-vars.yml`, with categories: network/ports, database, optional services
 - **Local Overrides**: Project-specific settings in `.env` that take precedence over central defaults
 - **Optional Services**: Container services that can be enabled/disabled via configuration flags
+
+## Non-goals *(mandatory)*
+
+- This feature does NOT replace `.env` workflows; it only adds a richer central defaults layer.
+- This feature does NOT introduce complex templating or conditionals inside YAML.
+- This feature does NOT require optional services to be installed or enabled unless explicitly toggled.
 
 ## Success Criteria *(mandatory)*
 
@@ -97,4 +142,4 @@ As a developer, I want to enable or disable optional services like Redis and Mai
 - YAML format is familiar to target developers
 - Default values represent common development scenarios
 - Optional services (Redis, Mailhog) use standard ports
-- Users understand environment variable precedence (local > global)
+- Users benefit from explicit documentation of precedence rules and common override patterns

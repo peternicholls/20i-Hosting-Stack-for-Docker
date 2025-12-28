@@ -6,6 +6,33 @@
 **Priority**: 🟡 High  
 **Input**: User description: "GitHub Actions workflow to keep PHP, MariaDB, Nginx versions current"
 
+## Definition of “Latest Stable” *(mandatory)*
+
+Docker image tags vary widely across registries and repositories. This spec defines **stable** as a tag that:
+
+- Represents a GA release (no `alpha`, `beta`, `rc`, `preview`, `dev`, `nightly` markers)
+- Matches a predictable version pattern for the component
+- Is compatible with how versions are stored in `config/stack-vars.yml`
+
+### Tag selection and normalization rules
+
+- **PHP**:
+  - Consider tags that represent the PHP version family used by this stack (e.g. `8.5`, `8.5.x`, `8.6`, `8.6.x`), excluding any tag containing `alpha`, `beta`, `rc`, `preview`, `dev`, `nightly`.
+  - Normalise discovered tags to the format stored in `stack-vars.yml` (e.g. if the stack stores `8.5`, then map any `8.5.x` to `8.5` unless the stack explicitly stores patch versions).
+
+- **MariaDB**:
+  - Consider stable tags matching the major.minor line used by the stack (e.g. `10.6`, `10.11`), excluding pre-release markers.
+  - Normalise to the format stored in `stack-vars.yml`.
+
+- **Nginx**:
+  - Prefer the stable release line over mainline if both exist.
+  - Exclude pre-release markers.
+  - Normalise to the format stored in `stack-vars.yml`.
+
+### Stability priority
+
+If multiple valid stable tags exist, the workflow MUST select the **highest stable version** after normalisation.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Automatic Weekly Version Checks (Priority: P1)
@@ -18,7 +45,7 @@ As a maintainer, I want the system to automatically check for new stable version
 
 **Acceptance Scenarios**:
 
-1. **Given** the scheduled time (Sunday 00:00 UTC), **When** the workflow runs, **Then** it queries Docker Hub API for PHP, MariaDB, and Nginx latest stable versions
+1. **Given** the scheduled time (Sunday 00:00 UTC), **When** the workflow runs, **Then** it queries the registry for candidate tags and selects the latest stable versions per this spec’s stable-tag rules
 2. **Given** all versions are current, **When** the workflow completes, **Then** no PR is created and workflow exits successfully
 3. **Given** a newer version is available, **When** the workflow detects it, **Then** it proceeds to create an update PR
 
@@ -38,6 +65,16 @@ As a maintainer, I want the system to create a pull request with version updates
 2. **Given** the PR is created, **When** viewing the PR, **Then** it includes a CHANGELOG entry explaining the update rationale
 3. **Given** multiple components have updates, **When** the workflow runs, **Then** a single PR is created with all updates bundled
 
+#### PR safety rules
+
+- The workflow MUST create a PR only if it produces a real diff in `config/stack-vars.yml`.
+- The workflow MUST NOT open multiple concurrent update PRs for the same branch of work; if an update PR already exists, it MUST update that PR instead of creating a new one.
+- The workflow MUST use a predictable branch name (e.g. `auto/version-bump-YYYY-MM-DD`).
+- The workflow MUST include a concise PR description that lists:
+  - Components updated
+  - Old version → new version
+  - Test summary
+
 ---
 
 ### User Story 3 - Automated Test Suite Before PR (Priority: P3)
@@ -50,9 +87,22 @@ As a maintainer, I want the system to run automated tests before creating an upd
 
 **Acceptance Scenarios**:
 
-1. **Given** a version update is detected, **When** the workflow runs tests, **Then** stack start/stop tests are executed with the new version
+1. **Given** a version update is detected, **When** the workflow runs tests, **Then** it boots the stack with the updated versions, verifies key services respond, and tears down cleanly
 2. **Given** tests pass, **When** the workflow completes, **Then** a PR is created
 3. **Given** tests fail, **When** the workflow completes, **Then** no PR is created and failure is logged
+
+#### Minimum automated test contract
+
+The workflow’s pre-PR tests MUST, at minimum:
+
+- Bring the stack up using the proposed updated versions
+- Verify:
+  - Nginx is responding on the configured host port
+  - phpMyAdmin is reachable on the configured port
+  - MariaDB is reachable and accepts a connection (credentialed)
+- Bring the stack down cleanly
+
+Tests MUST be designed to run reliably in CI (avoid port conflicts and ensure teardown always runs).
 
 ---
 
@@ -67,7 +117,7 @@ As a maintainer, I want to manually trigger the version check workflow so that I
 **Acceptance Scenarios**:
 
 1. **Given** the workflow definition, **When** a maintainer triggers it manually, **Then** the workflow runs immediately
-2. **Given** a manual trigger with specific version override, **When** the workflow runs, **Then** it checks only that specified component
+2. **Given** a manual trigger with a component selector, **When** the workflow runs, **Then** it checks only the selected component(s)
 
 ---
 
@@ -78,12 +128,18 @@ As a maintainer, I want to manually trigger the version check workflow so that I
 - What happens if the automated PR conflicts with existing changes?
 - How does the system handle rollback if a merged update causes issues?
 
+## Non-goals *(mandatory)*
+
+- This feature does NOT change Dockerfile build steps, installed extensions, or configuration defaults beyond version bumps.
+- This feature does NOT migrate major versions automatically if doing so requires manual intervention or stack reconfiguration.
+- This feature does NOT change runtime behaviour of the stack except where upstream version changes inherently alter behaviour.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: System MUST run automated version checks weekly on Sunday 00:00 UTC
-- **FR-002**: System MUST query Docker Hub API for PHP, MariaDB, and Nginx latest stable versions
+- **FR-002**: System MUST query the relevant container registry for PHP, MariaDB, and Nginx candidate tags and select latest stable versions
 - **FR-003**: System MUST compare discovered versions against current `config/stack-vars.yml` values
 - **FR-004**: System MUST create a PR only when newer stable versions are available
 - **FR-005**: System MUST run automated stack start/stop tests before creating PR
@@ -111,7 +167,8 @@ As a maintainer, I want to manually trigger the version check workflow so that I
 
 ## Assumptions
 
-- Docker Hub API provides stable version tags in predictable format
+- Container registries provide tags that can be filtered deterministically into stable vs pre-release
+- The workflow may require authenticated registry access (e.g. a token) to avoid rate limits
 - GitHub Actions has sufficient runtime minutes for weekly execution
 - Test suite accurately validates stack functionality
 - Maintainers review PRs within reasonable timeframe (1 week)
