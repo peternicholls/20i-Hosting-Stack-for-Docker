@@ -32,7 +32,7 @@ var (
 //   - Collapses consecutive hyphens/underscores into a single hyphen
 //   - Trims leading and trailing hyphens
 //   - Moves leading digits to the end (e.g., "123-test" -> "test-123")
-//   - Prepends "p" if the name starts with a digit after processing
+//   - For names that are only digits, prepends "p" (e.g., "123" -> "p123")
 //   - Returns "project" as fallback if the result is empty
 //
 // Examples:
