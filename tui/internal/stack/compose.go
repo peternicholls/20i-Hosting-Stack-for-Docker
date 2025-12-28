@@ -167,7 +167,7 @@ func ComposeRestart(stackFile, codeDir string) *ComposeResult {
 		}
 	}
 
-	// Default codeDir to current directory if not provided
+	// Get effective code directory
 	var err error
 	codeDir, err = getEffectiveCodeDir(codeDir)
 	if err != nil {
@@ -218,7 +218,7 @@ func ComposeDestroy(stackFile, codeDir string) *ComposeResult {
 		}
 	}
 
-	// Default codeDir to current directory if not provided
+	// Get effective code directory
 	var err error
 	codeDir, err = getEffectiveCodeDir(codeDir)
 	if err != nil {
