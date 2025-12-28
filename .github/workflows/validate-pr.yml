@@ -1,14 +1,14 @@
 name: Validate PR
 
 on:
-    pull_request:
-        branches:
-            - main
-        types: [opened, synchronize, reopened]
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened]
 
 permissions:
-    contents: read
-    pull-requests: write
+  contents: read
+  pull-requests: write
 
 jobs:
     validate:
