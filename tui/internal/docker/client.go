@@ -1,6 +1,6 @@
 // Project: 20i Stack Manager TUI
 // File: client.go
-// Purpose: Docker client wrapper: Client struct and NewClient() initializer
+// Purpose: Docker client wrapper for container lifecycle and compose operations
 // Version: 0.1.0
 // Updated: 2025-12-28
 
@@ -10,11 +10,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
 )
+
+var execCommand = exec.CommandContext
 
 // Sentinel errors returned by the Docker client wrapper.
 var (
@@ -32,10 +40,43 @@ var (
 	ErrUnknown = errors.New("unknown docker error")
 )
 
+// ContainerStatus represents the normalized status of a container for UI rendering.
+type ContainerStatus string
+
+const (
+	// StatusRunning indicates a container is actively running.
+	StatusRunning ContainerStatus = "running"
+	// StatusStopped indicates a container exists but is not running.
+	StatusStopped ContainerStatus = "stopped"
+	// StatusRestarting indicates a container is restarting.
+	StatusRestarting ContainerStatus = "restarting"
+	// StatusError indicates a container is in a failed or unknown state.
+	StatusError ContainerStatus = "error"
+)
+
+// Container represents a Docker container for Phase 3 lifecycle operations.
+// Extended in Phase 5 with Ports, CreatedAt, StartedAt.
+type Container struct {
+	ID      string
+	Name    string
+	Service string
+	Image   string
+	Status  ContainerStatus
+	State   string
+}
+
+type dockerAPI interface {
+	Ping(ctx context.Context) (types.Ping, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
+	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
+	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
+	ContainerRestart(ctx context.Context, containerID string, options container.StopOptions) error
+}
+
 // Client is a thin wrapper around the official Docker SDK client
 // that implements the minimal contract required by the TUI.
 type Client struct {
-	cli *dockerclient.Client
+	cli dockerAPI
 	ctx context.Context
 }
 
@@ -69,6 +110,96 @@ func (c *Client) Ping(ctx context.Context) error {
 		return mapConnectionError(err)
 	}
 	return nil
+}
+
+// ListContainers returns all containers for the provided Docker Compose project.
+func (c *Client) ListContainers(projectName string) ([]Container, error) {
+	listCtx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
+	defer cancel()
+
+	args := filters.NewArgs()
+	if strings.TrimSpace(projectName) != "" {
+		args.Add("label", fmt.Sprintf("com.docker.compose.project=%s", projectName))
+	}
+
+	containers, err := c.cli.ContainerList(listCtx, container.ListOptions{
+		All:     true,
+		Filters: args,
+	})
+	if err != nil {
+		return nil, mapOperationError(err)
+	}
+
+	results := make([]Container, 0, len(containers))
+	for _, summary := range containers {
+		results = append(results, Container{
+			ID:      summary.ID,
+			Name:    containerName(summary.Names),
+			Service: containerService(summary),
+			Image:   summary.Image,
+			Status:  mapDockerState(string(summary.State)),
+			State:   summary.Status,
+		})
+	}
+
+	return results, nil
+}
+
+// StartContainer starts a stopped container by ID.
+func (c *Client) StartContainer(containerID string) error {
+	startCtx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
+	defer cancel()
+
+	if err := c.cli.ContainerStart(startCtx, containerID, container.StartOptions{}); err != nil {
+		return mapOperationError(err)
+	}
+
+	return nil
+}
+
+// StopContainer stops a running container, waiting up to timeout seconds.
+func (c *Client) StopContainer(containerID string, timeout int) error {
+	timeoutSeconds := normalizeTimeout(timeout)
+	stopCtx, cancel := context.WithTimeout(c.ctx, time.Duration(timeoutSeconds+5)*time.Second)
+	defer cancel()
+
+	if err := c.cli.ContainerStop(stopCtx, containerID, container.StopOptions{Timeout: &timeoutSeconds}); err != nil {
+		return mapOperationError(err)
+	}
+
+	return nil
+}
+
+// RestartContainer restarts a container, waiting up to timeout seconds for stop.
+func (c *Client) RestartContainer(containerID string, timeout int) error {
+	timeoutSeconds := normalizeTimeout(timeout)
+	restartCtx, cancel := context.WithTimeout(c.ctx, time.Duration(timeoutSeconds+5)*time.Second)
+	defer cancel()
+
+	if err := c.cli.ContainerRestart(restartCtx, containerID, container.StopOptions{Timeout: &timeoutSeconds}); err != nil {
+		return mapOperationError(err)
+	}
+
+	return nil
+}
+
+// ComposeStop stops all containers in a Docker Compose project.
+func (c *Client) ComposeStop(projectPath string) error {
+	return c.runComposeCommand(projectPath, 30*time.Second, "stop")
+}
+
+// ComposeRestart restarts all containers in a Docker Compose project.
+func (c *Client) ComposeRestart(projectPath string) error {
+	return c.runComposeCommand(projectPath, 60*time.Second, "restart")
+}
+
+// ComposeDown stops and removes containers, networks, and optionally volumes.
+func (c *Client) ComposeDown(projectPath string, removeVolumes bool) error {
+	args := []string{"down"}
+	if removeVolumes {
+		args = append(args, "-v")
+	}
+	return c.runComposeCommand(projectPath, 60*time.Second, args...)
 }
 
 // mapConnectionError maps common errors returned by the Docker SDK into
@@ -110,4 +241,98 @@ func mapConnectionError(err error) error {
 		// Preserve original error text while signalling unknown error category
 		return fmt.Errorf("%w: %s", ErrUnknown, err)
 	}
+}
+
+func mapOperationError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	mapped := mapConnectionError(err)
+	if errors.Is(mapped, ErrDaemonUnreachable) || errors.Is(mapped, ErrPermissionDenied) || errors.Is(mapped, ErrTimeout) {
+		return mapped
+	}
+	return err
+}
+
+func normalizeTimeout(timeout int) int {
+	if timeout <= 0 {
+		return 10
+	}
+	return timeout
+}
+
+func (c *Client) runComposeCommand(projectPath string, timeout time.Duration, args ...string) error {
+	composePath, err := resolveComposePath(projectPath)
+	if err != nil {
+		return err
+	}
+
+	cmdArgs := append([]string{"compose"}, args...)
+	ctx, cancel := context.WithTimeout(c.ctx, timeout)
+	defer cancel()
+
+	cmd := execCommand(ctx, "docker", cmdArgs...)
+	cmd.Dir = filepath.Dir(composePath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		message := strings.TrimSpace(string(output))
+		if message != "" {
+			return fmt.Errorf("docker compose %s failed: %w: %s", strings.Join(args, " "), err, message)
+		}
+		return fmt.Errorf("docker compose %s failed: %w", strings.Join(args, " "), err)
+	}
+
+	return nil
+}
+
+func resolveComposePath(projectPath string) (string, error) {
+	if strings.TrimSpace(projectPath) == "" {
+		return "", fmt.Errorf("project path is required")
+	}
+
+	composePath := filepath.Join(projectPath, "docker-compose.yml")
+	if _, err := os.Stat(composePath); err != nil {
+		return "", fmt.Errorf("compose file not found at %s: %w", composePath, err)
+	}
+
+	return composePath, nil
+}
+
+func mapDockerState(state string) ContainerStatus {
+	switch strings.ToLower(strings.TrimSpace(state)) {
+	case "running":
+		return StatusRunning
+	case "restarting":
+		return StatusRestarting
+	case "exited", "created", "paused", "dead":
+		return StatusStopped
+	default:
+		return StatusError
+	}
+}
+
+func containerName(names []string) string {
+	for _, name := range names {
+		trimmed := strings.TrimPrefix(name, "/")
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func containerService(summary container.Summary) string {
+	if summary.Labels != nil {
+		if service, ok := summary.Labels["com.docker.compose.service"]; ok && service != "" {
+			return service
+		}
+	}
+
+	name := containerName(summary.Names)
+	if name != "" {
+		return name
+	}
+
+	return summary.ID
 }

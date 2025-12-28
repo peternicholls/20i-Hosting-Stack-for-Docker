@@ -132,37 +132,80 @@ Before proceeding to Phase 3 implementation, consider these architectural decisi
 
 **Rationale**: This is the PRIMARY use case - get stacks running and verified. Dashboard monitoring is secondary.
 
+**📚 CRITICAL - Read Before Starting Phase 3**:
+
+1. **[PHASE3-IMPLEMENTATION-NOTES.md](PHASE3-IMPLEMENTATION-NOTES.md)** - Architectural decisions and implementation patterns
+   - Section 1: Entity Design Strategy (minimal Container schema - 6 fields only)
+   - Section 2: Dashboard Layout Strategy (2-panel layout, NOT 3-panel)
+   - Section 3: Service List Rendering (simple icons + names, NO stats yet)
+   - Section 4: Message Type Design (string-based actions, not enums)
+   - Section 5: Command Function Pattern (generic containerActionCmd)
+   - Section 6: Compose Operations Strategy (Stop/Restart/Down only, NO Up)
+   - Section 7: Error Message Formatting (centralized formatDockerError)
+   - Section 8: Testing Strategy (3-layer approach)
+
+2. **[PHASE3-ROADMAP.md](PHASE3-ROADMAP.md)** - Step-by-step execution plan
+   - Block 1-4: Docker Client Layer (entities, list, lifecycle, compose)
+   - Block 5: Message Types Enhancement
+   - Block 6-8: Dashboard Foundation (model, rendering, navigation)
+   - Block 9-11: Actions & Polish (container actions, stack actions, status messages)
+   - Block 12-13: Optional polish + Integration testing
+   - Time estimates: 25-29 hours solo, 14-18 hours with 3 developers
+
+3. **[PHASE3-ADR.md](PHASE3-ADR.md)** - Architecture Decision Records
+   - ADR-001: Minimal Container schema (6 fields → extend to 9 in Phase 5)
+   - ADR-002: 2-panel layout in Phase 3 (expand to 3-panel in Phase 5)
+   - ADR-003: String-based actions (not typed enums)
+   - ADR-004: Generic containerActionCmd (not separate functions)
+   - ADR-005: No ComposeUp implementation (focus on management, not setup)
+   - ADR-006: Centralized error formatter (consistent UX)
+
+**⚠️ Implementation Order**: Follow critical path in PHASE3-IMPLEMENTATION-NOTES.md Section "Implementation Order"
+- Start: T026-T027 (entities) → T028-T029 (state mapping) → T030-T031 (list containers)
+- Then: T044-T046 (dashboard model) → T047-T049 (rendering) → T050 (wire to root)
+- See PHASE3-ROADMAP.md for detailed block-by-block breakdown
+
 ### Implementation for User Story 2 - LIFECYCLE FIRST
 
-- [ ] T026 [P] [US2] Create Container entity struct in internal/docker/client.go (ID, Name, Service, Image, Status, State fields - minimal for lifecycle; will be extended later with Ports, CreatedAt, StartedAt)
-- [ ] T027 [P] [US2] Create ContainerStatus enum in internal/docker/client.go (Running, Stopped, Restarting, Error)
-- [ ] T028 [P] [TEST] Create internal/docker/client_test.go unit tests for mapDockerState() with table-driven tests (all Docker states → ContainerStatus)
-- [ ] T029 [US2] Implement mapDockerState() helper function in internal/docker/client.go to map Docker states to ContainerStatus enum
-- [ ] T030 [US2] Implement ListContainers(projectName string) method in internal/docker/client.go per docker-api.md contract
-- [ ] T031 [P] [TEST] Add unit tests to client_test.go for ListContainers (with mock client, test project filtering, empty results, errors)
-- [ ] T032 [P] [US2] Implement StartContainer(containerID string) method in internal/docker/client.go per docker-api.md contract
-- [ ] T033 [P] [US2] Implement StopContainer(containerID string, timeout int) method in internal/docker/client.go
-- [ ] T034 [P] [US2] Implement RestartContainer(containerID string, timeout int) method in internal/docker/client.go
-- [ ] T035 [P] [TEST] Add unit tests for Start/Stop/Restart methods (mock client, test success, container not found, timeout errors)
-- [ ] T036 [P] [US2] Implement ComposeStop(projectPath string) method in internal/docker/client.go per docker-api.md
-- [ ] T037 [P] [US2] Implement ComposeRestart(projectPath string) method in internal/docker/client.go
-- [ ] T038 [P] [US2] Implement ComposeDown(projectPath string, removeVolumes bool) method in internal/docker/client.go
-- [ ] T039 [P] [TEST] Add unit tests for Compose operations (mock exec, test success, invalid path, permission errors)
-- [ ] T040 [US2] Add ContainerAction enum to internal/app/messages.go (Start, Stop, Restart)
-- [ ] T041 [US2] Add ComposeAction enum to internal/app/messages.go (StopAll, RestartAll, Destroy)
-- [ ] T042 [US2] Add composeActionMsg and composeActionResultMsg types to internal/app/messages.go
-- [ ] T043 [P] [TEST] Create internal/app/messages_test.go with tests for message type creation and field validation
+- [X] T026 [P] [US2] Create Container entity struct in internal/docker/client.go (ID, Name, Service, Image, Status, State fields - minimal for lifecycle; will be extended later with Ports, CreatedAt, StartedAt)
+  > **📋 Reference**: See PHASE3-ADR.md ADR-001 for minimal schema decision (6 fields only)
+  > **📋 Reference**: See PHASE3-IMPLEMENTATION-NOTES.md Section 1 for entity design strategy
+- [X] T027 [P] [US2] Create ContainerStatus enum in internal/docker/client.go (Running, Stopped, Restarting, Error)
+- [X] T028 [P] [TEST] Create internal/docker/client_test.go unit tests for mapDockerState() with table-driven tests (all Docker states → ContainerStatus)
+- [X] T029 [US2] Implement mapDockerState() helper function in internal/docker/client.go to map Docker states to ContainerStatus enum
+- [X] T030 [US2] Implement ListContainers(projectName string) method in internal/docker/client.go per docker-api.md contract
+- [X] T031 [P] [TEST] Add unit tests to client_test.go for ListContainers (with mock client, test project filtering, empty results, errors)
+- [X] T032 [P] [US2] Implement StartContainer(containerID string) method in internal/docker/client.go per docker-api.md contract
+- [X] T033 [P] [US2] Implement StopContainer(containerID string, timeout int) method in internal/docker/client.go
+- [X] T034 [P] [US2] Implement RestartContainer(containerID string, timeout int) method in internal/docker/client.go
+- [X] T035 [P] [TEST] Add unit tests for Start/Stop/Restart methods (mock client, test success, container not found, timeout errors)
+- [X] T036 [P] [US2] Implement ComposeStop(projectPath string) method in internal/docker/client.go per docker-api.md
+  > **📋 Reference**: See PHASE3-ADR.md ADR-005 for rationale (NO ComposeUp - management not setup)
+- [X] T037 [P] [US2] Implement ComposeRestart(projectPath string) method in internal/docker/client.go
+- [X] T038 [P] [US2] Implement ComposeDown(projectPath string, removeVolumes bool) method in internal/docker/client.go
+  > **⚠️ WARNING**: removeVolumes=true DESTROYS ALL DATA - wire to 'D' key with confirmation in Phase 4
+- [X] T039 [P] [TEST] Add unit tests for Compose operations (mock exec, test success, invalid path, permission errors)
+- [X] T040 [US2] Add ContainerAction enum to internal/app/messages.go (Start, Stop, Restart)
+  > **📋 Reference**: See PHASE3-ADR.md ADR-003 for string-based action decision (use comments, NOT typed enums)
+- [X] T041 [US2] Add ComposeAction enum to internal/app/messages.go (StopAll, RestartAll, Destroy)
+  > **📋 Reference**: Document valid values in comments per ADR-003
+- [X] T042 [US2] Add composeActionMsg and composeActionResultMsg types to internal/app/messages.go
+- [X] T043 [P] [TEST] Create internal/app/messages_test.go with tests for message type creation and field validation
 - [ ] T044 [P] [US2] Create internal/views/dashboard/dashboard.go with DashboardModel struct (serviceList, containers, selectedIndex fields - NO stats yet)
   > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md` - "Component Structure" section
   > Every component must implement tea.Model interface (Init/Update/View). See full pattern example.
+  > **📋 Reference**: See PHASE3-ADR.md ADR-002 for 2-panel layout decision (NOT 3-panel)
 - [ ] T045 [US2] Implement DashboardModel.Init() method to load container list
 - [ ] T046 [US2] Implement containerListMsg handling in DashboardModel.Update()
 - [ ] T047 [US2] Create internal/views/dashboard/service_list.go with simple list rendering (status icon + name only)
   > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "List Row Styles" section
   > AND `/runbooks/research/QUICK-REFERENCE.md` - "Service List" pattern (copy-paste example)
   > Use StatusIcon from T013 + RowStyle/SelectedRowStyle. DEFINE STYLES ONCE at package level, not in View()!
+  > **📋 Reference**: See PHASE3-IMPLEMENTATION-NOTES.md Section 3 for simple rendering pattern (NO stats)
 - [ ] T048 [P] [TEST] Create internal/views/dashboard/dashboard_test.go with Bubble Tea test program (test Init returns correct cmd, Update handles messages, View renders)
 - [ ] T049 [US2] Implement DashboardModel.View() with simple 2-panel layout (service list 30% | status messages 70% | footer)
+  > **📋 Reference**: See PHASE3-ADR.md ADR-002 for 2-panel layout justification and Phase 5 migration plan
+  > **📋 Reference**: See PHASE3-IMPLEMENTATION-NOTES.md Section 2 for layout ASCII diagram
   > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "3-Panel Layout (Dashboard)" section
   > Use lipgloss.JoinHorizontal() for side-by-side, JoinVertical() for stacking. Measure panels first with lipgloss.Width().
   > **⚠️ Anti-Pattern**: Don't hardcode widths! Use m.width from tea.WindowSizeMsg to calculate panel sizes.
@@ -176,12 +219,14 @@ Before proceeding to Phase 3 implementation, consider these architectural decisi
 - [ ] T055 [US2] Implement 'S' key handler to stop all stack containers (with simple confirmation)
 - [ ] T056 [US2] Implement 'R' key handler to restart entire stack
 - [ ] T057 [P] [TEST] Add tests for key handlers (test 's' sends correct containerActionMsg, 'S' sends composeActionMsg)
-- [ ] T058 [US2] Create startContainerCmd() function in dashboard.go to launch async Docker operation
+- [ ] T058 [US2] Create containerActionCmd() function in dashboard.go to launch async Docker operation
+  > **📋 CRITICAL**: See PHASE3-ADR.md ADR-004 - Implement ONE generic function for all actions (NOT separate functions)
+  > **📋 Reference**: See PHASE3-IMPLEMENTATION-NOTES.md Section 5 for generic command pattern code example
   > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Component Pattern" section, fetchServicesCmd() example
   > Commands return tea.Msg when complete. Use goroutine inside tea.Cmd to avoid blocking UI.
   > **⚠️ Anti-Pattern**: NEVER call Docker API directly in Update() - this blocks the UI! Always use tea.Cmd.
-- [ ] T059 [US2] Create stopContainerCmd() function in dashboard.go
-- [ ] T060 [US2] Create restartContainerCmd() function in dashboard.go
+- [ ] T059 [US2] MERGED INTO T058 - Use generic containerActionCmd() per ADR-004
+- [ ] T060 [US2] MERGED INTO T058 - Use generic containerActionCmd() per ADR-004
 - [ ] T061 [US2] Implement containerActionResultMsg handler with success/error feedback
 - [ ] T062 [P] [TEST] Add tests for command functions (use mock client, verify commands send correct result messages)
 - [ ] T063 [US2] Add status message panel to show "✅ Container started" or "❌ Failed: error"
@@ -189,17 +234,33 @@ Before proceeding to Phase 3 implementation, consider these architectural decisi
   > Use ErrorStyle/WarningStyle/InfoStyle with Unicode icons (✓, ✗, ⚠, ℹ) from "Unicode Icons Reference"
 - [ ] T064 [US2] Trigger containerListMsg refresh after successful action
 - [ ] T065 [US2] Implement error message formatting per docker-api.md (user-friendly port conflicts, timeouts)
+  > **📋 Reference**: See PHASE3-ADR.md ADR-006 for centralized formatDockerError() function pattern
+  > **📋 Reference**: See PHASE3-IMPLEMENTATION-NOTES.md Section 7 for complete code example with regex
 - [ ] T066 [P] [TEST] Add tests for error message formatting (test port conflict → user-friendly message, timeout → actionable message)
+  > **📋 Reference**: See ADR-006 for table-driven test structure
 - [ ] T067 [US2] Add footer with basic shortcuts: "s:start/stop  r:restart  S:stop-all  R:restart-all  D:destroy  q:quit"
   > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md" - "Footer/Help Style" section
   > Use FooterStyle with ColorMuted foreground. Keep footer visible at bottom of every view.
 - [ ] T068 [US2] Implement Enter key handler to show detail panel for selected container (basic info: image, status, uptime)
 - [ ] T069 [US2] Implement Tab key to cycle focus between service list and status message panel
 - [ ] T070 [P] [TEST] Create tests/integration/lifecycle_test.go - integration test with mock Docker client simulating full lifecycle workflow
+  > **📋 Reference**: See PHASE3-ROADMAP.md Block 13 for test scenarios and acceptance criteria
 - [ ] T071 [TEST] Manual test per US2 acceptance scenarios 1-5 in spec.md: start stopped container, verify status changes; stop running container, verify status changes
+  > **📋 Reference**: See PHASE3-ROADMAP.md "Test Scenarios" section for all 6 acceptance tests
 - [ ] T072 [TEST] Run `make test` to verify all Phase 3 tests pass (unit + integration), achieve >85% coverage
+  > **📋 Reference**: See PHASE3-IMPLEMENTATION-NOTES.md Section 8 for testing strategy and coverage targets
 
 **Checkpoint**: Core 20i-gui functionality working - can start/stop/restart containers, verify status, >85% test coverage
+
+**📊 Phase 3 Success Criteria** (from PHASE3-ROADMAP.md):
+- ✅ All 47 tasks (T026-T072) checked off
+- ✅ `make test` passes with >85% coverage
+- ✅ All 6 manual acceptance scenarios verified
+- ✅ No blocking bugs or crashes
+- ✅ Error messages are user-friendly
+- ✅ Code follows Go best practices (gofmt, golint)
+
+**🎯 Ready for Phase 4**: Dashboard layout established, message handling patterns proven, Docker client tested and reliable
 
 ---
 

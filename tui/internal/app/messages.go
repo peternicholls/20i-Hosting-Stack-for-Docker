@@ -26,7 +26,8 @@ type LogLineMsg struct {
 	Line        string
 }
 
-// ContainerActionMsg sent when user requests action on container
+// ContainerActionMsg sent when user requests action on container.
+// Valid actions: "start", "stop", "restart".
 type ContainerActionMsg struct {
 	Action      string // "start", "stop", "restart"
 	ContainerID string
@@ -39,7 +40,8 @@ type ContainerActionResultMsg struct {
 	Error   error
 }
 
-// ComposeActionMsg sent when user requests action on entire stack
+// ComposeActionMsg sent when user requests action on entire stack.
+// Valid actions: "stop", "restart", "down".
 type ComposeActionMsg struct {
 	Action string // "stop", "restart", "down"
 }
