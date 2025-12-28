@@ -74,6 +74,9 @@ As a maintainer, I want the system to create a pull request with version updates
   - Components updated
   - Old version → new version
   - Test summary
+- The workflow MUST include a note in the PR description about pre-built image availability expectations:
+  - If the update changes a version that affects pre-built images (e.g. `PHP_VERSION`), the PR MUST state whether pre-built images are expected to be available only after the next stack release, and that local-build fallback may be required on the branch.
+- The workflow SHOULD, where feasible, link to the relevant image/tag strategy (release pin and PHP-line tags) used by the stack’s pre-built images.
 
 ---
 
@@ -96,6 +99,7 @@ As a maintainer, I want the system to run automated tests before creating an upd
 The workflow’s pre-PR tests MUST, at minimum:
 
 - Bring the stack up using the proposed updated versions
+- Tests MUST validate the local-build path (`USE_PREBUILT=false`) to ensure the stack remains buildable even when pre-built images are not yet available.
 - Verify:
   - Nginx is responding on the configured host port
   - phpMyAdmin is reachable on the configured port
@@ -103,6 +107,11 @@ The workflow’s pre-PR tests MUST, at minimum:
 - Bring the stack down cleanly
 
 Tests MUST be designed to run reliably in CI (avoid port conflicts and ensure teardown always runs).
+
+#### Pre-built images cadence note
+
+- Pre-built images are guaranteed for official stack releases (see spec 006).
+- Update PRs may reference versions (especially `PHP_VERSION`) that do not yet have pre-built images published; this is expected on branches, and local-build tests ensure the update is still safe to propose.
 
 ---
 
@@ -127,6 +136,7 @@ As a maintainer, I want to manually trigger the version check workflow so that I
 - How does the system handle pre-release or release candidate versions (should skip)?
 - What happens if the automated PR conflicts with existing changes?
 - How does the system handle rollback if a merged update causes issues?
+- Update PR bumps `PHP_VERSION` but no matching pre-built image exists yet (must be documented in PR; local-build path remains the source of truth until release)
 
 ## Non-goals *(mandatory)*
 
@@ -144,9 +154,10 @@ As a maintainer, I want to manually trigger the version check workflow so that I
 - **FR-004**: System MUST create a PR only when newer stable versions are available
 - **FR-005**: System MUST run automated stack start/stop tests before creating PR
 - **FR-006**: System MUST include CHANGELOG entry in update PR
-- **FR-007**: System MUST support manual workflow trigger via GitHub Actions UI
-- **FR-008**: System MUST skip pre-release, alpha, beta, and RC versions
-- **FR-009**: System MUST handle API failures gracefully with appropriate logging
+- **FR-007**: System MUST ensure update PRs clearly communicate any expected lag between version bumps and availability of pre-built images, and indicate the fallback expectation on branches
+- **FR-008**: System MUST support manual workflow trigger via GitHub Actions UI
+- **FR-009**: System MUST skip pre-release, alpha, beta, and RC versions
+- **FR-010**: System MUST handle API failures gracefully with appropriate logging
 
 ### Key Entities
 
