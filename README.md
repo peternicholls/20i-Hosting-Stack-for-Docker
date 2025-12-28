@@ -1,5 +1,5 @@
 # 20i Stack - Docker Development Environment
-**A reusable Docker stack based on 20i's shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
+**A reusable Docker stack based on [20i's](https://www.20i.com) shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
 **Perfect for**: PHP development, Laravel projects, WordPress development, prototyping, and any web project needing a quick, reliable development environment.
 
 ## Overview
@@ -94,35 +94,32 @@ export MYSQL_PASSWORD=projectpass
 
 ## Shell Integration
 
-Add to your `.zshrc`:
+The easiest way to integrate with your shell is to source the provided example script:
 
 ```bash
-# 20i stack configuration
-# See zsh-example-script.zsh in the repo for full implementation
-# This logic sets STACK_FILE and STACK_HOME based on what's already defined:
-# - If STACK_FILE is set, derive STACK_HOME from it
-# - Otherwise, use STACK_HOME (or default) and set STACK_FILE from that
-if [[ -n "${STACK_FILE:-}" ]]; then
-    STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
-else
-    STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
-    STACK_FILE="$STACK_HOME/docker-compose.yml"
-fi
+# Add to your .zshrc or .bashrc:
+source /path/to/20i-stack/zsh-example-script.zsh
+```
 
-# Functions (see zsh-example-script.zsh for full implementations)
-20i-up() { ... }      # Start stack
-20i-down() { ... }    # Stop stack
-20i-status() { ... }  # View status
-20i-logs() { ... }    # View logs
-20i-destroy() { ... } # Destroy stack (removes volumes!)
+**For zsh users**: Copy the script to your home directory for easier access:
+```bash
+cp /path/to/20i-stack/zsh-example-script.zsh ~/.20i-stack.zsh
+echo "source ~/.20i-stack.zsh" >> ~/.zshrc
+```
 
-# Aliases
-alias 20i='20i-status'
-alias dcu='20i-up'
-alias dcd='20i-down'
-20i-gui() {
-    "$STACK_HOME/20i-gui" "$@"
-}
+This provides convenient commands:
+- `20i-up` - Start stack for current directory
+- `20i-down` - Stop stack
+- `20i-status` (or just `20i`) - View status
+- `20i-logs` - Follow logs
+- `20i-destroy` - Destroy stack and volumes (with confirmation)
+- `20i-gui` - Launch interactive menu
+- `dcu` / `dcd` - Aliases for up/down
+
+**Optional**: Customize the stack location by setting environment variables before sourcing:
+```bash
+export STACK_FILE=/custom/path/docker-compose.yml  # Or set STACK_HOME
+source ~/.20i-stack.zsh
 ```
 
 ## Workflow Examples
