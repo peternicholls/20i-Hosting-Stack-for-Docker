@@ -305,7 +305,7 @@ func TestCalculateCPUPercent(t *testing.T) {
 					SystemUsage: 10000000,
 				},
 			},
-			expected: 20.0, // (1000000 / 10000000) * 2 * 100 = 20%
+			expected: 20.0, // (2000000 - 1000000) / (20000000 - 10000000) * len(PercpuUsage) * 100 = 20%
 		},
 	}
 

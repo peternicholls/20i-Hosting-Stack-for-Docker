@@ -21,6 +21,13 @@ import (
 	dockerclient "github.com/docker/docker/client"
 )
 
+const (
+	// containerStateRunning is the Docker state for running containers
+	containerStateRunning = "running"
+	// cpuStatsTimeout is the timeout for collecting CPU statistics
+	cpuStatsTimeout = 2 * time.Second
+)
+
 // ContainerInfo holds runtime information about a container in the stack.
 type ContainerInfo struct {
 	ID      string  // Container ID
@@ -81,7 +88,7 @@ func GetStackStatus(projectName string) ([]ContainerInfo, error) {
 		}
 
 		// Get CPU stats if container is running
-		if c.State == "running" {
+		if c.State == containerStateRunning {
 			info.CPUPerc = getCPUPercentage(ctx, cli, c.ID)
 		}
 
@@ -168,7 +175,7 @@ func resolvePort(ports []types.Port, containerPort uint16, envVar, defaultPort s
 // getCPUPercentage retrieves the current CPU usage percentage for a container.
 func getCPUPercentage(ctx context.Context, cli *dockerclient.Client, containerID string) float64 {
 	// Use a short timeout for stats collection
-	statsCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	statsCtx, cancel := context.WithTimeout(ctx, cpuStatsTimeout)
 	defer cancel()
 
 	stats, err := cli.ContainerStats(statsCtx, containerID, false)
