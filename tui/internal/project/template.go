@@ -114,8 +114,15 @@ func copyDir(src, dst string) error {
 		destPath := filepath.Join(dst, relPath)
 
 		if info.IsDir() {
-			// Create directory
-			return os.MkdirAll(destPath, info.Mode())
+			// Create directory hierarchy with a sane default mode, then
+			// explicitly set permissions to match the source directory.
+			if err := os.MkdirAll(destPath, 0o755); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
+			}
+			if err := os.Chmod(destPath, info.Mode().Perm()); err != nil {
+				return fmt.Errorf("failed to set permissions for directory %s: %w", destPath, err)
+			}
+			return nil
 		}
 
 		// Copy file
