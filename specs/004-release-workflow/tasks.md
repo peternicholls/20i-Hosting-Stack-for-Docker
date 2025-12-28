@@ -19,11 +19,10 @@
 
 **Purpose**: Create foundational files and directory structure for release workflow
 
-- [ ] T001 Create VERSION file with initial version `1.0.0` at `/VERSION`
-- [ ] T002 [P] Create release-please config at `/release-please-config.json`
-- [ ] T003 [P] Create release-please manifest at `/.release-please-manifest.json`
-- [ ] T004 [P] Create directory structure for scripts at `/scripts/release/`
-- [ ] T005 [P] Create directory structure for workflows at `/.github/workflows/`
+- [ ] T001 [P] Create release-please config at `/release-please-config.json`
+- [ ] T002 [P] Create release-please manifest at `/.release-please-manifest.json` with initial version `1.0.0`
+- [ ] T003 [P] Create directory structure for scripts at `/scripts/release/`
+- [ ] T004 [P] Create directory structure for workflows at `/.github/workflows/`
 
 ---
 
@@ -33,10 +32,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Implement version.sh script at `/scripts/release/version.sh` (get, bump, set commands)
-- [ ] T007 [P] Implement validate.sh script at `/scripts/release/validate.sh` (--version, --changelog, --all options)
-- [ ] T008 Update existing CHANGELOG.md to comply with Keep a Changelog format at `/CHANGELOG.md`
-- [ ] T009 [P] Update .gitignore to exclude dist/ artifacts at `/.gitignore`
+- [ ] T005 Implement version.sh script at `/scripts/release/version.sh` (reads from .release-please-manifest.json)
+- [ ] T006 [P] Implement validate.sh script at `/scripts/release/validate.sh` (--version, --changelog, --tags, --all options)
+- [ ] T007 Update existing CHANGELOG.md to comply with Keep a Changelog format at `/CHANGELOG.md`
+- [ ] T008 [P] Update .gitignore to exclude dist/ artifacts at `/.gitignore`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -50,9 +49,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create main release workflow at `/.github/workflows/release.yml` with release-please-action@v4
-- [ ] T011 [US1] Add release-please job to workflow with outputs (release_created, tag_name, version)
-- [ ] T012 [US1] Configure workflow permissions (contents: write, pull-requests: write)
+- [ ] T009 [US1] Create main release workflow at `/.github/workflows/release.yml` with release-please-action@v4
+- [ ] T010 [US1] Add release-please job to workflow with outputs (release_created, tag_name, version)
+- [ ] T011 [US1] Configure workflow permissions (contents: write, pull-requests: write)
+- [ ] T012 [US1] Add branch filter to workflow (only run on default branch 'main')
 - [ ] T013 [US1] Add concurrency control to prevent simultaneous releases in workflow
 - [ ] T014 [P] [US1] Add version badge to README.md at `/README.md`
 - [ ] T015 [P] [US1] Update PR template with conventional commit guide at `/.github/PULL_REQUEST_TEMPLATE.md`
@@ -74,7 +74,7 @@
 - [ ] T018 [US2] Add conventional commit validation using amannn/action-semantic-pull-request@v5
 - [ ] T019 [P] [US2] Add ShellCheck linting step to validate-pr.yml for scripts/
 - [ ] T020 [P] [US2] Add Docker Compose validation step to validate-pr.yml
-- [ ] T021 [US2] Create changelog-preview.sh script at `/scripts/release/changelog-preview.sh`
+- [ ] T021 [US2] Create changelog-preview.sh script at `/scripts/release/changelog-preview.sh` using release-please manifest
 - [ ] T022 [US2] Create changelog preview workflow at `/.github/workflows/changelog-preview.yml`
 
 **Checkpoint**: User Story 2 complete - CHANGELOG auto-generated from conventional commits
@@ -90,11 +90,12 @@
 ### Implementation for User Story 3
 
 - [ ] T023 [US3] Add pre-release validation step to release.yml using scripts/release/validate.sh --all
-- [ ] T024 [US3] Implement VERSION file validation in validate.sh (semver format check)
-- [ ] T025 [US3] Implement CHANGELOG validation in validate.sh (entry exists for version)
-- [ ] T026 [US3] Implement required files check in validate.sh (VERSION, CHANGELOG.md, docker-compose.yml)
-- [ ] T027 [P] [US3] Add emoji status indicators to validate.sh output (✅ pass, ❌ fail)
-- [ ] T028 [US3] Add validation failure handling to release.yml with clear error messages
+- [ ] T024 [US3] Implement version format validation in validate.sh (semver format check from manifest)
+- [ ] T025 [US3] Implement duplicate tag validation in validate.sh --tags (check git tag doesn't exist)
+- [ ] T026 [US3] Implement CHANGELOG validation in validate.sh (entry exists for version)
+- [ ] T027 [US3] Implement required files check in validate.sh (CHANGELOG.md, docker-compose.yml, release-please config)
+- [ ] T028 [P] [US3] Add emoji status indicators to validate.sh output (✅ pass, ❌ fail)
+- [ ] T029 [US3] Add validation failure handling to release.yml with clear error messages
 
 **Checkpoint**: User Story 3 complete - invalid releases are blocked with clear feedback
 
@@ -108,14 +109,14 @@
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Implement artifacts.sh script at `/scripts/release/artifacts.sh`
-- [ ] T030 [US4] Add archive creation logic to artifacts.sh (tar.gz with version in name)
-- [ ] T031 [US4] Define archive contents in artifacts.sh per contracts/release-workflow.md
-- [ ] T032 [US4] Add SHA256 checksum generation to artifacts.sh (checksums.sha256)
-- [ ] T033 [P] [US4] Create standalone install.sh script at `/scripts/release/install.sh`
-- [ ] T034 [US4] Add build-artifacts job to release.yml (conditional on release_created)
-- [ ] T035 [US4] Configure softprops/action-gh-release@v2 for artifact upload in release.yml
-- [ ] T036 [US4] Add artifact upload with glob patterns (dist/*.tar.gz, dist/install.sh, dist/checksums.sha256)
+- [ ] T030 [US4] Implement artifacts.sh script at `/scripts/release/artifacts.sh`
+- [ ] T031 [US4] Add archive creation logic to artifacts.sh (tar.gz with version in name)
+- [ ] T032 [US4] Define archive contents in artifacts.sh per contracts/release-workflow.md
+- [ ] T033 [US4] Add SHA256 checksum generation to artifacts.sh (checksums.sha256)
+- [ ] T034 [P] [US4] Create standalone install.sh script at `/scripts/release/install.sh` with download and extract logic
+- [ ] T035 [US4] Add build-artifacts job to release.yml (conditional on release_created)
+- [ ] T036 [US4] Configure softprops/action-gh-release@v2 for artifact upload in release.yml
+- [ ] T037 [US4] Add artifact upload with glob patterns (dist/*.tar.gz, dist/install.sh, dist/checksums.sha256)
 
 **Checkpoint**: User Story 4 complete - releases include downloadable artifacts with checksums
 
@@ -125,12 +126,14 @@
 
 **Purpose**: Documentation, edge cases, and final validation
 
-- [ ] T037 [P] Document release workflow in CONTRIBUTING.md at `/CONTRIBUTING.md`
-- [ ] T038 [P] Add release-request issue template at `/.github/ISSUE_TEMPLATE/release-request.yml`
-- [ ] T039 Add pre-release version support to release-please-config.json (alpha, beta, rc)
-- [ ] T040 [P] Add workflow_dispatch manual trigger option to release.yml for exceptional cases
-- [ ] T041 Run full release workflow validation using quickstart.md test scenarios
-- [ ] T042 Update copilot-instructions.md with release workflow commands at `/.github/agents/copilot-instructions.md`
+- [ ] T038 [P] Document release workflow in CONTRIBUTING.md at `/CONTRIBUTING.md`
+- [ ] T039 [P] Add release-request issue template at `/.github/ISSUE_TEMPLATE/release-request.yml`
+- [ ] T040 Add pre-release version support to release-please-config.json (prerelease: true for alpha/beta/rc)
+- [ ] T041 Add pre-release version format validation to validate.sh (support v2.0.0-alpha.1 format)
+- [ ] T042 Add pre-release testing scenario to quickstart.md (create alpha release, verify prerelease flag)
+- [ ] T043 [P] Add workflow_dispatch manual trigger option to release.yml with version input
+- [ ] T044 Run full release workflow validation using quickstart.md test scenarios
+- [ ] T045 [P] Update copilot-instructions.md with release workflow commands at `/.github/agents/copilot-instructions.md`
 
 ---
 
@@ -170,7 +173,7 @@ Phase 7: Polish
 ### Critical Path
 
 ```
-T001 → T006 → T010 → T011 → T012 → T013 (MVP release workflow)
+T001 → T005 → T009 → T010 → T011 → T012 → T013 (MVP release workflow)
 ```
 
 ---
@@ -180,10 +183,10 @@ T001 → T006 → T010 → T011 → T012 → T013 (MVP release workflow)
 ### Phase 1 (Setup)
 ```bash
 # Run in parallel:
-T002: Create release-please-config.json
-T003: Create .release-please-manifest.json
-T004: Create scripts/release/ directory
-T005: Create .github/workflows/ directory
+T001: Create release-please-config.json
+T002: Create .release-please-manifest.json
+T003: Create scripts/release/ directory
+T004: Create .github/workflows/ directory
 ```
 
 ### Phase 3 (US1)
@@ -202,8 +205,8 @@ T020: Add Docker Compose validation
 
 ### Phase 6 (US4)
 ```bash
-# After T032:
-T033: Create install.sh (parallel with T034)
+# After T033:
+T034: Create install.sh (parallel with T035)
 ```
 
 ---
@@ -212,9 +215,9 @@ T033: Create install.sh (parallel with T034)
 
 ### MVP First (User Story 1 Only)
 
-1. ✅ Complete Phase 1: Setup (T001-T005)
-2. ✅ Complete Phase 2: Foundational (T006-T009)
-3. ✅ Complete Phase 3: User Story 1 (T010-T015)
+1. ✅ Complete Phase 1: Setup (T001-T004)
+2. ✅ Complete Phase 2: Foundational (T005-T008)
+3. ✅ Complete Phase 3: User Story 1 (T009-T015)
 4. **VALIDATE**: Create a test release, verify tag and GitHub Release
 5. **Deploy**: MVP is functional - maintainers can create releases
 
@@ -231,21 +234,20 @@ T033: Create install.sh (parallel with T034)
 
 | Phase | Tasks | Parallel |
 |-------|-------|----------|
-| Setup | 5 | 4 |
+| Setup | 4 | 3 |
 | Foundational | 4 | 2 |
-| US1 (P1) | 6 | 2 |
+| US1 (P1) | 7 | 2 |
 | US2 (P2) | 7 | 2 |
-| US3 (P3) | 6 | 1 |
+| US3 (P3) | 7 | 1 |
 | US4 (P4) | 8 | 1 |
-| Polish | 6 | 3 |
-| **Total** | **42** | **15** |
+| Polish | 8 | 4 |
+| **Total** | **45** | **15** |
 
 ---
 
 ## Files Created/Modified Summary
 
-### New Files (26)
-- `/VERSION`
+### New Files (25)
 - `/release-please-config.json`
 - `/.release-please-manifest.json`
 - `/.github/workflows/release.yml`
@@ -258,7 +260,7 @@ T033: Create install.sh (parallel with T034)
 - `/scripts/release/install.sh`
 - `/scripts/release/changelog-preview.sh`
 
-### Modified Files (5)
+### Modified Files (6)
 - `/CHANGELOG.md` - Update format
 - `/README.md` - Add version badge
 - `/.gitignore` - Add dist/

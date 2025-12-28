@@ -16,7 +16,7 @@ As a maintainer, I want to create a versioned release by triggering a workflow s
 
 **Independent Test**: Trigger the release workflow with version "v2.0.0", verify a git tag is created, and a GitHub Release is published with release notes.
 
-**Required:** use of a GitHub Actions workflow to automate the release process. ymal version file, and associated configurations with in. Workflow should create a git tag, generate a changelog from commit messages, and publish a GitHub Release. Readme and documentation should be updated to reflect the new versioning system, use badges and other indicators to show current version, status, and links to release notes.
+**Required:** use of a GitHub Actions workflow to automate the release process. Release-please will manage versioning in `.release-please-manifest.json` and update CHANGELOG.md automatically. Workflow should create a git tag, generate a changelog from commit messages, and publish a GitHub Release. README and documentation should be updated to reflect the new versioning system, use badges and other indicators to show current version, status, and links to release notes.
 
 **Acceptance Scenarios**:
 
@@ -64,22 +64,22 @@ As a user, I want release artifacts attached to GitHub Releases so that I can do
 
 **Why this priority**: Artifacts provide easy access to installable components without cloning the repo.
 
-**Independent Test**: Create a release, verify artifacts (CLI binary, install scripts) are attached to the GitHub Release page.
+**Independent Test**: Create a release, verify artifacts (stack archive, install script) are attached to the GitHub Release page.
 
 **Acceptance Scenarios**:
 
-1. **Given** a release is published, **When** viewing the release page, **Then** CLI binary for macOS/Linux is attached
-2. **Given** a release is published, **When** viewing the release page, **Then** installation scripts are attached
+1. **Given** a release is published, **When** viewing the release page, **Then** stack archive (tar.gz) is attached
+2. **Given** a release is published, **When** viewing the release page, **Then** installation script is attached
 3. **Given** a release is published, **When** downloading artifacts, **Then** checksums are provided for verification
 
 ---
 
 ### Edge Cases
 
-- What happens if two releases are triggered simultaneously?
-- How does the system handle releases from non-default branches?
-- What happens if artifact build fails but release is already tagged?
-- How are pre-release versions (alpha, beta, rc) handled differently?
+- What happens if two releases are triggered simultaneously? → Concurrency control prevents parallel releases
+- How does the system handle releases from non-default branches? → Workflow only runs on default branch (main), other branches are ignored
+- What happens if artifact build fails but release is already tagged? → Tag and release remain, artifacts can be uploaded manually or workflow re-run
+- How are pre-release versions (alpha, beta, rc) handled differently? → Pre-release flag set in GitHub Release, version format includes suffix (e.g., v2.0.0-alpha.1)
 
 ## Requirements *(mandatory)*
 
@@ -90,9 +90,9 @@ As a user, I want release artifacts attached to GitHub Releases so that I can do
 - **FR-003**: System MUST generate CHANGELOG entries from conventional commits
 - **FR-004**: System MUST validate CHANGELOG is updated before publishing release
 - **FR-005**: System MUST run all tests before finalizing release
-- **FR-006**: System MUST attach release artifacts (CLI binary, install scripts) to GitHub Release
+- **FR-006**: System MUST attach release artifacts (stack archive, install script, checksums) to GitHub Release
 - **FR-007**: System MUST support pre-release versions with appropriate tags (alpha, beta, rc)
-- **FR-008**: System MUST prevent duplicate version numbers
+- **FR-008**: System MUST prevent duplicate version numbers by validating tag doesn't already exist
 - **FR-009**: Release workflow MUST be triggerable by maintainers via GitHub Actions UI
 
 ### Key Entities

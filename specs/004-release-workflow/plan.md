@@ -28,10 +28,10 @@ Implement a fully automated release workflow using GitHub Actions that creates s
 | I. Environment-Driven Configuration | ✅ PASS | Version in `VERSION` file, workflow inputs for overrides, no hard-coded values |
 | II. Multi-Platform First | ✅ PASS | Artifacts support AMD64/ARM64, workflow runs on ubuntu-latest (standard) |
 | III. Path Independence | ✅ PASS | All scripts use `$GITHUB_WORKSPACE`, relative paths within repo |
-| IV. Centralized Defaults | ✅ PASS | VERSION file as single source, workflow inputs for release-time overrides |
+| IV. Centralized Defaults | ✅ PASS | Release-please manifest as single source, workflow inputs for release-time overrides |
 | V. User Experience & Feedback | ✅ PASS | Preflight summary, emoji status indicators, clear error messages |
 | VI. Documentation as First-Class | ✅ PASS | Auto-generated CHANGELOG, README badges, release notes |
-| VII. Version Consistency | ✅ PASS | VERSION file synced to git tags, CHANGELOG, docker-compose labels |
+| VII. Version Consistency | ✅ PASS | Release-please manifest synced to git tags, CHANGELOG, README badge |
 | Commit Hygiene (Dev Workflow) | ✅ PASS | Conventional commits enforced via PR validation workflow |
 
 **Constitution Gate**: ✅ PASSED - All principles satisfied
@@ -77,11 +77,10 @@ scripts/
 └── release/
     ├── validate.sh              # Pre-release validation checks
     ├── changelog.sh             # Generate/update CHANGELOG
-    ├── version.sh               # Version bumping (major/minor/patch)
+    ├── version.sh               # Read version from release-please manifest
     ├── artifacts.sh             # Package release artifacts
     └── publish.sh               # Publish to GitHub Releases
 
-VERSION                          # Single source of truth (e.g., "1.0.0")
 CHANGELOG.md                     # Existing - auto-updated by workflow
 README.md                        # Existing - add version badge
 ```
@@ -106,7 +105,7 @@ README.md                        # Existing - add version badge
 | IV. Centralized Defaults | ✅ PASS | ✅ PASS | Confirmed: release-please-config.json centralizes settings |
 | V. User Experience & Feedback | ✅ PASS | ✅ PASS | Confirmed: PR preview comments, release notes, status badges |
 | VI. Documentation as First-Class | ✅ PASS | ✅ PASS | Confirmed: Auto CHANGELOG, quickstart.md, inline comments |
-| VII. Version Consistency | ✅ PASS | ✅ PASS | Confirmed: VERSION → tag → CHANGELOG → README badge |
+| VII. Version Consistency | ✅ PASS | ✅ PASS | Confirmed: Manifest → tag → CHANGELOG → README badge |
 | Commit Hygiene | ✅ PASS | ✅ PASS | Confirmed: validate-pr.yml enforces conventional commits |
 
 **Post-Design Gate**: ✅ PASSED - Design maintains full compliance
@@ -114,7 +113,7 @@ README.md                        # Existing - add version badge
 ### Design Decisions Aligned with Constitution
 
 1. **release-please over semantic-release**: Simpler, no Node.js dependency (Principle I, III)
-2. **VERSION file over package.json**: Language-agnostic, shell-script friendly (Principle III)
+2. **Manifest-based versioning**: release-please manifest as single source of truth (Principle IV)
 3. **Separate scripts/release/**: Testable outside CI, reusable (Principle VI)
 4. **SHA256 checksums**: Security verification for artifacts (best practice)
 5. **PR-based releases**: Maintainer control, clear audit trail (Principle V)
