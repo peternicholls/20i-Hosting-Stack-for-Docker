@@ -456,6 +456,43 @@ func TestComposeUpStreaming(t *testing.T) {
 		// The exact content depends on whether docker is available
 		t.Logf("Received %d lines from compose command", len(lines))
 	})
+
+	t.Run("channel closes on error path", func(t *testing.T) {
+		// Create a compose file with invalid syntax
+		invalidComposeFile := filepath.Join(tempDir, "invalid-compose.yml")
+		invalidContent := []byte("invalid yaml content {{{")
+		if err := os.WriteFile(invalidComposeFile, invalidContent, 0644); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
+
+		projectDir := filepath.Join(tempDir, "error-project")
+		if err := os.MkdirAll(projectDir, 0755); err != nil {
+			t.Fatalf("failed to create project dir: %v", err)
+		}
+
+		ch, err := ComposeUpStreaming(invalidComposeFile, projectDir)
+		if err != nil {
+			t.Fatalf("unexpected error starting streaming: %v", err)
+		}
+
+		// Collect all lines (should include error messages)
+		var lines []OutputLine
+		for line := range ch {
+			lines = append(lines, line)
+			// Should have at least one error line
+		}
+
+		// Channel should be closed even on error
+		_, open := <-ch
+		if open {
+			t.Error("channel should be closed even on error path")
+		}
+
+		// Should have received some output (likely error messages)
+		if len(lines) == 0 {
+			t.Error("expected at least one output line on error path")
+		}
+	})
 }
 
 func TestStreamPipe(t *testing.T) {
