@@ -46,3 +46,27 @@ func StatusIcon(status string) string {
 
 	return style.Render(icon)
 }
+
+// RenderModal renders a modal dialog box centered on screen.
+// T144: Double-confirmation modal component.
+func RenderModal(content string, screenWidth, screenHeight int) string {
+	modalWidth := min(60, screenWidth-10)
+	modalHeight := min(12, screenHeight-6)
+
+	modalStyle := lipgloss.NewStyle().
+		Border(lipgloss.DoubleBorder()).
+		BorderForeground(ColorWarning).
+		Padding(1, 2).
+		Width(modalWidth).
+		Height(modalHeight).
+		Align(lipgloss.Center, lipgloss.Center)
+
+	return modalStyle.Render(content)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

@@ -38,3 +38,41 @@ func TestStatusIconGlyphs(t *testing.T) {
 		}
 	}
 }
+
+// T144: Test for RenderModal component
+func TestRenderModal(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+
+	content := "Test modal content"
+	screenWidth := 80
+	screenHeight := 24
+
+	modal := ui.RenderModal(content, screenWidth, screenHeight)
+
+	if modal == "" {
+		t.Error("RenderModal should not return empty string")
+	}
+
+	if !strings.Contains(modal, content) {
+		t.Errorf("RenderModal should contain the content, got: %s", modal)
+	}
+}
+
+func TestRenderModal_SmallScreen(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+
+	content := "Small screen test"
+	screenWidth := 40
+	screenHeight := 12
+
+	modal := ui.RenderModal(content, screenWidth, screenHeight)
+
+	if modal == "" {
+		t.Error("RenderModal should not return empty string on small screen")
+	}
+
+	if !strings.Contains(modal, content) {
+		t.Errorf("RenderModal should contain the content on small screen, got: %s", modal)
+	}
+}
+
