@@ -6,6 +6,31 @@
 **Priority**: 🟢 Medium  
 **Input**: User description: "Easy addition of common development services like Redis, Mailhog, Elasticsearch via CLI enable/disable commands"
 
+## Product Contract *(mandatory)*
+
+Optional services are an **add-on layer** to the core stack. They MUST be:
+
+- **Opt-in** (disabled by default)
+- **Per-project** (stored in `.20i-config.yml`)
+- **Deterministic** (same project config yields the same enabled services and Compose configuration)
+- **Non-invasive** (no manual editing of compose files required by the user)
+
+### Where configuration lives
+
+- Enabled optional services MUST be stored in the project’s `.20i-config.yml`.
+- User-level preferences (UI state, last-used options, caches) MUST live in `~/.20i/` and MUST NOT be stored inside project directories.
+
+### Service module mechanism
+
+- Each optional service MUST be defined using Docker Compose profiles, composed into the base stack without duplicating the base stack definition.
+- The mechanism MUST work in both CLI and TUI using the shared stack engine.
+
+#### Composition strategy
+
+- Docker Compose profiles are the canonical mechanism for optional services.
+- Enabling a service maps to activating one or more Compose profiles.
+- The stack engine MUST translate enabled services into the appropriate `--profile` selections when invoking `docker compose`.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Enable Optional Service via CLI (Priority: P1)
@@ -18,9 +43,10 @@ As a developer, I want to enable a service like Redis with a single command so t
 
 **Acceptance Scenarios**:
 
-1. **Given** a running stack without Redis, **When** the user runs `20i enable redis`, **Then** Redis service is added to configuration
+1. **Given** a running stack without Redis, **When** the user runs `20i enable redis`, **Then** Redis is recorded as enabled in `.20i-config.yml` (idempotent)
 2. **Given** Redis is enabled, **When** the stack restarts, **Then** Redis container starts and is accessible on port 6379
 3. **Given** `20i enable mailhog`, **When** the stack restarts, **Then** Mailhog SMTP is available on port 1025 and web UI on port 8025
+4. **Given** Redis is already enabled, **When** the user runs `20i enable redis` again, **Then** no duplicate config is created and the command exits successfully
 
 ---
 
@@ -36,7 +62,8 @@ As a developer, I want to disable a service I no longer need so that I can free 
 
 1. **Given** Redis is enabled in the stack, **When** the user runs `20i disable redis`, **Then** Redis is removed from configuration
 2. **Given** Redis is disabled, **When** the stack restarts, **Then** no Redis container is started
-3. **Given** the `--remove-data` flag, **When** disabling a service, **Then** associated volumes are also removed
+3. **Given** another enabled service depends on Redis, **When** the user runs `20i disable redis`, **Then** the CLI refuses with an actionable message (or offers `--force` to disable dependents)
+4. **Given** the `--remove-data` flag, **When** disabling a service, **Then** associated volumes are also removed
 
 ---
 
@@ -52,7 +79,7 @@ As a developer, I want to see which optional services are available and which ar
 
 1. **Given** a stack with Redis enabled, **When** the user runs `20i services`, **Then** Redis shows as "enabled" and other services show as "available"
 2. **Given** no optional services enabled, **When** the user runs `20i services`, **Then** all services show as "available" with descriptions
-3. **Given** a service is running, **When** the user runs `20i services --status`, **Then** running services show health and port information
+3. **Given** enabled services are running, **When** the user runs `20i services --status`, **Then** the output includes container status and exposed ports (health if available)
 
 ---
 
@@ -70,14 +97,23 @@ As a developer, I want my enabled services to be remembered across stack restart
 2. **Given** service configuration in `.20i-config.yml`, **When** viewing the file, **Then** enabled services are listed
 3. **Given** project is cloned fresh, **When** `.20i-config.yml` exists, **Then** enabled services start with the stack
 
+#### Persistence contract
+
+- Enabled services are part of the project configuration and MUST travel with the repo when `.20i-config.yml` is committed.
+- The system MUST NOT write user-specific state into the project.
+- `20i start` MUST apply enabled services automatically without requiring re-enable commands.
+
 ---
 
 ### Edge Cases
 
-- What happens when enabling a service that conflicts with an existing port?
-- How does the system handle enabling a service that requires another service (dependencies)?
-- What happens when disabling a service that other services depend on?
-- How does the system behave when service image pull fails?
+- Enabling a service with a port conflict (must refuse with actionable guidance and a suggested override)
+- Enabling a service whose image cannot be pulled (must fail with actionable guidance; if local build is supported, it may suggest it)
+- Disabling a service that has dependents (must refuse or require explicit `--force`)
+- Enabling a service with required dependencies (must automatically enable dependencies OR prompt with a clear plan)
+- Service already enabled/disabled (commands must be idempotent)
+- `--remove-data` used when volumes do not exist (must succeed safely)
+- Running `20i services --status` when Docker is unavailable (must provide actionable guidance)
 
 ## Requirements *(mandatory)*
 
@@ -87,6 +123,10 @@ As a developer, I want my enabled services to be remembered across stack restart
 - **FR-002**: CLI MUST support `20i disable <service>` command to disable optional services
 - **FR-003**: CLI MUST support `20i services` command to list available and enabled services
 - **FR-004**: System MUST persist service enablement in `.20i-config.yml`
+- **FR-004a**: System MUST treat `20i enable/disable` as idempotent operations
+- **FR-004b**: System MUST handle dependencies between optional services (auto-enable dependencies OR refuse with actionable guidance)
+- **FR-004c**: System MUST handle port conflicts with clear errors and a supported override mechanism
+- **FR-004d**: System MUST implement optional services using Docker Compose profiles (no generated override compose files in MVP)
 - **FR-005**: System MUST support Redis service (caching, port 6379)
 - **FR-006**: System MUST support Mailhog service (email testing, SMTP 1025, UI 8025)
 - **FR-007**: System MUST support Elasticsearch service (search, port 9200)
@@ -100,11 +140,18 @@ As a developer, I want my enabled services to be remembered across stack restart
 - **Service Configuration**: Persistent record of enabled services in `.20i-config.yml`
 - **Service Module**: Modular compose definition for each optional service
 
+## Non-goals *(mandatory)*
+
+- This feature does NOT introduce production-grade hardening of optional services; defaults are for development use.
+- This feature does NOT enable services globally across all projects; enablement is per-project.
+- This feature does NOT store user preferences inside projects; user preferences belong in `~/.20i/`.
+- This feature does NOT generate or mutate compose override files for optional services in the MVP.
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Enabling a service takes under 30 seconds (excluding image pull time)
+- **SC-001**: Enabling a service is a single command and results in an updated `.20i-config.yml` plus a successful stack restart (time varies by image pull)
 - **SC-002**: Disabling a service takes under 10 seconds
 - **SC-003**: Service configuration persists across 100% of stack restarts
 - **SC-004**: Zero manual file editing required to enable/disable services
