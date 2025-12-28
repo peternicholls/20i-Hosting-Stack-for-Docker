@@ -1,117 +1,101 @@
-# Feature Specification: Video Tutorials
+# Feature Specification: Video Walkthroughs & Screen Scripts (Docs-First)
 
 **Feature Branch**: `020-video-tutorials`  
 **Created**: 2025-12-28  
 **Status**: Draft  
-**Priority**: 🟢 Medium  
-**Input**: User description: "Visual guides for common tasks like getting started, CLI usage, and troubleshooting"
+**Priority**: 🟡 Low (Documentation & Education)  
+**Input**: User description: "Screen-based walkthroughs and narrated demonstrations to complement written documentation"
 
-## User Scenarios & Testing *(mandatory)*
+## Product Contract *(mandatory)*
 
-### User Story 1 - Watch Getting Started Tutorial (Priority: P1)
+This feature is **documentation-first** and focuses on **screen script writing**, not software implementation.
 
-As a new user, I want to watch a short video showing how to get started so that I can see the stack in action before committing time to learn.
+- Videos are optional educational artefacts, not required for correct use of the tool.
+- Written documentation remains the **canonical source of truth**.
+- Videos MUST mirror documented workflows and MUST NOT introduce undocumented behaviour.
+- This feature does NOT block releases or gate functionality.
 
-**Why this priority**: First impression through video is critical for user onboarding and adoption.
+## Scope
 
-**Independent Test**: Visit README, click "Getting Started" video link, verify video plays and covers installation through first stack start.
+- Short, narrated screen recordings demonstrating real workflows
+- Content derived directly from existing documentation and CLI/TUI behaviour
+- Hosted externally and linked from documentation
 
-**Acceptance Scenarios**:
+## Non-goals *(mandatory)*
 
-1. **Given** a new user visits the README, **When** they click the video link, **Then** a 5-minute getting started video plays
-2. **Given** the video is playing, **When** user watches, **Then** installation, initialization, and first start are demonstrated
-3. **Given** the video ends, **When** user follows along, **Then** they can reproduce the demonstrated workflow
+- This feature does NOT guarantee video coverage for all features
+- This feature does NOT require professional production values
+- This feature does NOT define analytics, engagement metrics, or success KPIs
+- This feature does NOT replace written documentation
 
----
+## Content Categories *(illustrative)*
 
-### User Story 2 - Learn CLI Commands Through Video (Priority: P2)
+### Category A: Getting Oriented
 
-As a developer, I want to watch a video demonstrating CLI commands so that I can learn the available features visually.
+- What the tool is (and is not)
+- Typical workflow overview
+- Project detection and stack start
 
-**Why this priority**: CLI usage video helps users discover features they might miss in text documentation.
+### Category B: Core Workflows
+ 
+- Starting and stopping the stack
+- Viewing status and logs
+- Enabling/disabling optional services
 
-**Independent Test**: Watch CLI tutorial video, verify all major commands are demonstrated with real terminal output.
+### Category C: Realistic Scenarios
 
-**Acceptance Scenarios**:
+- Cloning an existing 20i site into local development (ref spec 016)
+- Understanding parity differences (ref spec 015)
+- Common mistakes and recovery paths
 
-1. **Given** CLI tutorial video, **When** watching, **Then** init, start, stop, status, logs, and destroy commands are demonstrated
-2. **Given** each command demonstration, **When** watching, **Then** expected output and common use cases are shown
-3. **Given** video completion, **When** user tries commands, **Then** behavior matches video demonstration
+### Category D: Troubleshooting Narratives
 
----
+- Docker not running
+- Port conflicts
+- Permission issues
 
-### User Story 3 - Troubleshoot Common Issues via Video (Priority: P3)
+## Screen Script Writing Guidance *(mandatory)*
 
-As a developer encountering problems, I want to watch troubleshooting videos so that I can resolve issues without reading lengthy documentation.
+All videos SHOULD be based on a **written screen script** before recording.
 
-**Why this priority**: Visual troubleshooting reduces frustration and support burden.
+A screen script SHOULD include:
 
-**Independent Test**: Simulate common issue (port conflict), watch troubleshooting video, verify video shows how to diagnose and fix the issue.
+- Purpose of the video
+- Starting state (filesystem, running/stopped stack)
+- Step-by-step on-screen actions
+- Expected output and narration cues
+- Explicit call-outs when behaviour differs from production (parity notes)
 
-**Acceptance Scenarios**:
+Scripts SHOULD be stored alongside documentation (e.g. `docs/scripts/`).
 
-1. **Given** a port conflict error, **When** user watches troubleshooting video, **Then** diagnosis and resolution steps are shown
-2. **Given** a container failing to start, **When** user watches troubleshooting video, **Then** log checking and common fixes are demonstrated
-3. **Given** database connection issues, **When** user watches video, **Then** configuration verification steps are shown
+## Versioning & Drift *(mandatory)*
 
----
+- Each video MUST state the tool version it was recorded against.
+- Documentation MUST note when a video may be outdated.
+- Videos SHOULD be re-recorded only when workflows materially change.
 
-### User Story 4 - Access Videos from Documentation (Priority: P4)
+## Accessibility *(mandatory)*
 
-As a user reading documentation, I want embedded videos in relevant sections so that I can switch to visual learning when preferred.
+- Videos MUST include captions or subtitles where reasonably possible.
+- Videos SHOULD be skippable and concise.
+- Text alternatives MUST exist for all demonstrated workflows.
 
-**Why this priority**: Embedded videos enhance documentation but aren't the primary discovery path.
+## Distribution & Linking
 
-**Independent Test**: Navigate to "Adding Optional Services" in docs, verify embedded video demonstrates the feature.
+- Videos MAY be hosted on a public platform (e.g. YouTube).
+- Documentation SHOULD link to videos contextually rather than embedding aggressively.
+- Offline or text-only users MUST not be disadvantaged.
 
-**Acceptance Scenarios**:
+## Success Criteria *(qualitative)*
 
-1. **Given** README documentation, **When** user views installation section, **Then** related video is embedded or linked
-2. **Given** feature documentation, **When** user views optional services section, **Then** video demonstration is available
-3. **Given** mobile device access, **When** user views documentation, **Then** videos are accessible and playable
-
----
-
-### Edge Cases
-
-- What happens when video hosting platform is unavailable?
-- How does the documentation handle video version drift (outdated videos)?
-- What about users who prefer text or have accessibility needs?
-- How are videos kept up-to-date when features change?
-
-## Requirements *(mandatory)*
-
-### Functional Requirements
-
-- **FR-001**: System MUST provide "Getting Started" video (max 5 minutes)
-- **FR-002**: System MUST provide "CLI Installation and Usage" video (max 10 minutes)
-- **FR-003**: System MUST provide "Adding Optional Services" video (max 8 minutes)
-- **FR-004**: System MUST provide "Troubleshooting Guide" video (max 12 minutes)
-- **FR-005**: Videos MUST be hosted on accessible platform (YouTube or similar)
-- **FR-006**: Video links MUST be embedded in README and relevant documentation
-- **FR-007**: Videos MUST include captions/subtitles for accessibility
-- **FR-008**: Documentation MUST maintain text alternatives for all video content
-- **FR-009**: Videos MUST include version/date to indicate currency
-
-### Key Entities
-
-- **Tutorial Video**: Educational video demonstrating specific features or workflows
-- **Video Playlist**: Organized collection of tutorial videos for discovery
-- **Documentation Embed**: Video embedded or linked within markdown documentation
-
-## Success Criteria *(mandatory)*
-
-### Measurable Outcomes
-
-- **SC-001**: Getting Started video enables new users to start stack within 10 minutes of watching
-- **SC-002**: Videos have 70%+ completion rate (indicating useful content)
-- **SC-003**: Support questions decrease for topics covered by videos
-- **SC-004**: Videos are accessible on 95%+ of devices and networks
-- **SC-005**: All videos have captions with 95%+ accuracy
+- **SC-001**: Videos help users understand workflows faster, without replacing docs.
+- **SC-002**: Videos do not create confusion or contradict written guidance.
+- **SC-003**: Maintaining videos does not block or slow feature development.
 
 ## Assumptions
 
-- Video hosting platform (YouTube) provides reliable, free embedding
-- Target audience prefers visual learning for technical content
-- Video production tools are available to maintainers
-- Content remains relevant for 6+ months between updates
+- Maintainers are comfortable producing informal screen recordings.
+- Users vary in learning preference; video is supplemental.
+- Scripts can be reused or adapted for blog posts or talks.
+
+---

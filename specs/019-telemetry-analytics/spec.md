@@ -1,117 +1,97 @@
-# Feature Specification: Telemetry and Analytics
+# Feature Specification: Telemetry & Analytics (Exploratory)
 
 **Feature Branch**: `019-telemetry-analytics`  
 **Created**: 2025-12-28  
-**Status**: Draft  
-**Priority**: ⚪ Low (Future Exploration)  
-**Input**: User description: "Opt-in usage analytics to understand patterns and improve UX"
+**Status**: Exploratory / Parking Spec  
+**Priority**: ⚪ Very Low (Optional, Future Consideration)  
+**Input**: User description: "Optional, ethical telemetry to understand high-level usage patterns"
 
-## User Scenarios & Testing *(mandatory)*
+## Product Contract *(mandatory)*
 
-### User Story 1 - Opt-In to Anonymous Usage Tracking (Priority: P1)
+Telemetry, if implemented, MUST be:
 
-As a user who wants to help improve the project, I want to opt in to anonymous usage tracking so that maintainers can understand how the tool is used.
+- **Fully opt-in** (disabled by default)
+- **Anonymous by design** (no PII, no user identifiers, no project identifiers)
+- **Non-essential** to core functionality
+- **Transparent** (users can see exactly what would be collected)
 
-**Why this priority**: Opt-in is the foundation of ethical telemetry; must exist before any data collection.
+The project MUST remain fully usable without telemetry.
 
-**Independent Test**: Run `20i telemetry enable`, verify tracking is enabled and confirmation message is shown.
+## Scope *(exploratory)*
 
-**Acceptance Scenarios**:
+Telemetry is intended only to provide **high-level, aggregate signals** that help maintainers understand:
 
-1. **Given** a fresh installation, **When** first command runs, **Then** user is prompted about telemetry with opt-in option
-2. **Given** user runs `20i telemetry enable`, **When** command completes, **Then** telemetry is enabled and confirmed
-3. **Given** telemetry is disabled (default), **When** commands run, **Then** no data is collected or sent
+- Which commands are used most often
+- Which optional services or modules are commonly enabled
+- Which platform combinations are most common (OS, architecture)
 
----
+Telemetry is **not** intended for behavioural tracking, profiling, or user identification.
 
-### User Story 2 - Disable Telemetry at Any Time (Priority: P1)
+## Non-goals *(mandatory)*
 
-As a privacy-conscious user, I want to disable telemetry at any time so that I maintain control over my data.
+- Telemetry MUST NOT influence feature access or behaviour.
+- Telemetry MUST NOT be required for support or bug fixes.
+- Telemetry MUST NOT include file paths, project names, hostnames, IP addresses, or timestamps precise enough to identify individuals.
+- Telemetry MUST NOT become a KPI or success metric for the project.
+- Telemetry MUST NOT pressure users to opt in.
 
-**Why this priority**: User control is essential for trust and compliance; equally important as opt-in.
+## Consent & Control *(mandatory)*
 
-**Independent Test**: Run `20i telemetry disable`, verify tracking stops immediately and confirmation is shown.
+- Telemetry is **disabled by default**.
+- Users MAY enable telemetry explicitly via a command (e.g. `20i telemetry enable`).
+- Users MUST be able to disable telemetry at any time.
+- The `DO_NOT_TRACK=1` environment variable MUST override all other settings.
 
-**Acceptance Scenarios**:
+Consent state MUST be stored in the user configuration directory (e.g. `~/.20i/`), never in project directories.
 
-1. **Given** telemetry is enabled, **When** user runs `20i telemetry disable`, **Then** telemetry is immediately disabled
-2. **Given** telemetry is disabled, **When** any command runs, **Then** no network requests are made to telemetry endpoint
-3. **Given** environment variable `DO_NOT_TRACK=1`, **When** CLI runs, **Then** telemetry is automatically disabled
+## Transparency *(mandatory)*
 
----
+If telemetry exists, users MUST be able to:
 
-### User Story 3 - View What Data Is Collected (Priority: P2)
+- View exactly what data categories would be collected
+- See example payloads (sanitized)
+- Read a plain-language privacy policy
 
-As a user considering opting in, I want to see exactly what data will be collected so that I can make an informed decision.
+Commands such as `20i telemetry info` MAY be provided for this purpose.
 
-**Why this priority**: Transparency builds trust and is required for informed consent.
+## Data Categories *(illustrative only)*
 
-**Independent Test**: Run `20i telemetry info`, verify displayed data matches documentation and actual collection.
+If implemented, telemetry MAY include:
 
-**Acceptance Scenarios**:
+- CLI version
+- OS type and architecture
+- Invoked command name (e.g. `up`, `down`, `status`)
+- Optional services or modules enabled (by identifier only)
+- Anonymized error categories (not raw stack traces)
 
-1. **Given** user runs `20i telemetry info`, **When** output is displayed, **Then** all collected data categories are listed
-2. **Given** telemetry documentation, **When** reviewing, **Then** examples of actual data payloads are shown
-3. **Given** privacy policy, **When** reviewing, **Then** data retention period and handling are clearly stated
+Exact payloads are intentionally unspecified and subject to review.
 
----
+## Error Reporting *(optional)*
 
-### User Story 4 - Report Anonymized Command Errors (Priority: P3)
+Anonymized error reporting MAY be considered separately from usage telemetry.
 
-As a maintainer, I want anonymous error reports so that I can identify and fix common issues without users filing reports.
+If implemented:
 
-**Why this priority**: Error reporting provides actionable data for improvement.
+- Error reports MUST strip paths, usernames, and project identifiers
+- Error reports MUST be aggregated by category
+- Users MUST be able to opt in/out independently
 
-**Independent Test**: With telemetry enabled, trigger an error, verify anonymized error report is sent.
+## Governance & Review *(mandatory)*
 
-**Acceptance Scenarios**:
+- Telemetry code MUST be open source and auditable.
+- Any change to telemetry behaviour MUST be documented clearly in release notes.
+- Telemetry collection SHOULD be reviewed periodically for necessity and scope creep.
 
-1. **Given** telemetry is enabled and error occurs, **When** error is reported, **Then** stack trace and error type are sent without PII
-2. **Given** error report, **When** maintainer views, **Then** OS version, CLI version, and error details are available
-3. **Given** error involves file paths, **When** report is sent, **Then** paths are anonymized (no username or project names)
+## Success Criteria *(exploratory)*
 
----
-
-### Edge Cases
-
-- What happens when telemetry endpoint is unavailable?
-- How does the system handle users in GDPR-regulated regions?
-- What happens when telemetry data exceeds storage limits?
-- How are duplicate telemetry events handled (retry scenarios)?
-
-## Requirements *(mandatory)*
-
-### Functional Requirements
-
-- **FR-001**: Telemetry MUST be fully opt-in (disabled by default)
-- **FR-002**: CLI MUST support `20i telemetry enable`, `disable`, `info`, and `status` commands
-- **FR-003**: System MUST respect `DO_NOT_TRACK` environment variable
-- **FR-004**: Collected data MUST be anonymous (no PII, usernames, paths, IPs)
-- **FR-005**: System MUST collect: OS type, architecture, CLI version, command usage frequency
-- **FR-006**: System MUST collect: PHP version popularity, optional service enablement
-- **FR-007**: System MAY collect: anonymized error reports with stack traces
-- **FR-008**: Data collection code MUST be open source and auditable
-- **FR-009**: Privacy policy MUST be accessible and clearly documented
-
-### Key Entities
-
-- **Telemetry Event**: Anonymous usage data point with category, action, and optional metadata
-- **Telemetry Consent**: User's opt-in/opt-out preference stored in configuration
-- **Privacy Policy**: Document describing data collection, usage, and retention practices
-
-## Success Criteria *(mandatory)*
-
-### Measurable Outcomes
-
-- **SC-001**: Zero personally identifiable information collected
-- **SC-002**: Opt-in rate of 5-10% (industry standard for developer tools)
-- **SC-003**: Telemetry overhead adds less than 100ms to command execution
-- **SC-004**: Data provides actionable insights for roadmap prioritization
-- **SC-005**: Privacy documentation is complete and accessible
+- **SC-001**: Users trust that telemetry is optional and respectful.
+- **SC-002**: Telemetry (if enabled) does not impact correctness or stability.
+- **SC-003**: Telemetry can be removed entirely without affecting core features.
 
 ## Assumptions
 
-- Users are willing to share anonymous data to improve the tool
-- Telemetry collection service is reliable and affordable
-- Legal review confirms compliance with privacy regulations
-- Open source telemetry code builds community trust
+- Some users may choose to opt in to help guide development.
+- Maintainers prefer qualitative feedback over aggressive metrics.
+- The project prioritizes trust and simplicity over analytics depth.
+
+---

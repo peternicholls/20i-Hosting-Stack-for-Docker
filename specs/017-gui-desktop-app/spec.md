@@ -1,134 +1,102 @@
-# Feature Specification: GUI Desktop App
+# Feature Specification: Desktop GUI Wrapper (Exploratory)
 
 **Feature Branch**: `017-gui-desktop-app`  
 **Created**: 2025-12-28  
-**Status**: Draft  
-**Priority**: ⚪ Low (Future Exploration)  
-**Input**: User description: "Native macOS/Windows application for visual stack management with service toggles and log viewer"
+**Status**: Exploratory / Parking Spec  
+**Priority**: ⚪ Very Low (Future Exploration)  
+**Input**: User description: "Optional desktop GUI for visual stack management"
 
-## User Scenarios & Testing *(mandatory)*
+## Product Contract *(mandatory)*
 
-### User Story 1 - Start and Stop Stack via GUI (Priority: P1)
+If a desktop GUI is ever implemented, it MUST be a **thin wrapper** over the existing CLI/TUI behaviour.
 
-As a developer who prefers graphical interfaces, I want to start and stop the stack with a button click so that I don't need to use the terminal for basic operations.
+- The CLI remains the **canonical interface** for stack operations and configuration.
+- The GUI MUST NOT duplicate or re-implement stack orchestration, environment detection, config rules, or Docker/Compose logic.
+- The GUI SHOULD invoke the same underlying commands/APIs used by the CLI/TUI (or call a shared Go library used by both).
+- The GUI MUST use the same project configuration files and state rules (see specs 005–011).
 
-**Why this priority**: Start/stop is the fundamental operation; without it, the GUI provides no core value.
+This constraint prevents multi-version drift (CLI vs TUI vs GUI) and keeps maintenance manageable.
 
-**Independent Test**: Launch the app, click "Start" button, verify stack containers start and status updates in GUI.
+### Implementation preference
 
-**Acceptance Scenarios**:
+- The project SHOULD prefer a Go-based UI framework where feasible (to keep a single-language toolchain).
+- Acceptable future options MAY include Go-native GUI frameworks or a minimal webview approach.
 
-1. **Given** the GUI app is open, **When** the user clicks "Start", **Then** all stack containers start and status shows "Running"
-2. **Given** a running stack, **When** the user clicks "Stop", **Then** all containers stop gracefully and status shows "Stopped"
-3. **Given** stack is starting, **When** viewing the GUI, **Then** a progress indicator shows startup status
+## Scope *(exploratory)*
 
----
+- A GUI wrapper may provide a visual front-end for:
+  - selecting a project directory
+  - starting/stopping the stack
+  - showing status and key URLs
+  - viewing logs
+  - toggling optional services (via existing config + restart)
 
-### User Story 2 - Toggle Optional Services Visually (Priority: P2)
+## Non-goals *(mandatory)*
 
-As a developer, I want to enable and disable optional services using checkboxes so that I can visually manage my stack configuration.
+- The GUI is NOT a replacement for the CLI/TUI.
+- The GUI does NOT introduce new behaviour unavailable via CLI/TUI.
+- The GUI does NOT implement installers, templates, or deployment automation.
+- The GUI does NOT create an alternative configuration system or store secrets.
 
-**Why this priority**: Visual service management is a key differentiator from CLI; highly requested by GUI users.
+## Capability Tiers *(not a delivery plan)*
 
-**Independent Test**: Open GUI, check "Redis" checkbox, restart stack, verify Redis container is now running.
+These tiers describe potential scope if a GUI is ever pursued.
 
-**Acceptance Scenarios**:
+### Tier A: Core Controls
 
-1. **Given** the GUI services panel, **When** user checks "Redis" checkbox, **Then** Redis is marked for enabling on next start
-2. **Given** services panel, **When** viewing checkboxes, **Then** currently enabled services are checked
-3. **Given** a service toggle change, **When** stack restarts, **Then** service enablement matches GUI selection
+- Project picker (choose working directory)
+- Start / Stop / Restart controls
+- Status indicator (Running / Stopped / Starting)
+- Display key URLs (Website, phpMyAdmin, DB port)
 
----
+### Tier B: Observability
 
-### User Story 3 - View Live Logs in GUI (Priority: P3)
+- Live logs viewer (tail selected service logs)
+- Quick access to open URLs in browser
+- Surface actionable errors (Docker not running, port conflicts) using the same messages as CLI/TUI
 
-As a developer debugging issues, I want to view live container logs in the GUI so that I can monitor output without switching to terminal.
+### Tier C: Convenience
 
-**Why this priority**: Log viewing is important for debugging but not essential for basic stack management.
+- Optional service toggles (mapped to spec 007 profiles, applied via `.20i-config.yml` + restart)
+- “Open terminal” shortcut (launches external terminal in project directory)
 
-**Independent Test**: Open GUI logs panel, select "Apache" service, verify logs stream in real-time.
+## User Scenarios *(illustrative only)*
 
-**Acceptance Scenarios**:
+1. **Start/Stop**: User opens GUI, selects a project, clicks Start, sees Running.
+2. **View logs**: User clicks Logs, selects nginx, sees tail output.
+3. **Enable service**: User toggles Redis, GUI writes config (same keys as CLI), restarts stack.
 
-1. **Given** the GUI logs panel, **When** user selects a service, **Then** logs for that service are displayed
-2. **Given** logs are streaming, **When** new log entries occur, **Then** they appear in real-time
-3. **Given** log panel, **When** user clicks "Clear", **Then** displayed logs are cleared (not deleted)
+## Edge Cases *(exploratory)*
 
----
+- Docker not installed or daemon not running
+- Port conflicts on start
+- Multiple projects open (should default to one active project)
+- Very large log volumes
 
-### User Story 4 - Resolve Port Conflicts via GUI (Priority: P4)
-
-As a developer encountering port conflicts, I want the GUI to detect and help resolve conflicts so that I can fix issues without manual investigation.
-
-**Why this priority**: Port conflict resolution is a quality-of-life improvement over basic functionality.
-
-**Independent Test**: Configure port 80 while another service uses it, start stack, verify GUI shows conflict and suggests resolution.
-
-**Acceptance Scenarios**:
-
-1. **Given** port 80 is in use, **When** stack fails to start, **Then** GUI shows port conflict warning with affected port
-2. **Given** port conflict detected, **When** user clicks "Suggest Alternative", **Then** next available port is suggested
-3. **Given** user changes port in GUI, **When** stack restarts, **Then** new port is used successfully
-
----
-
-### User Story 5 - Built-in Terminal (Priority: P5)
-
-As a developer, I want a built-in terminal in the GUI so that I can run commands without leaving the app.
-
-**Why this priority**: Built-in terminal is convenient but users can always use external terminal.
-
-**Independent Test**: Open GUI terminal panel, run `20i status`, verify output is displayed in app.
-
-**Acceptance Scenarios**:
-
-1. **Given** GUI terminal panel, **When** user types command, **Then** command executes in project context
-2. **Given** terminal output, **When** viewing results, **Then** output is properly formatted with colors
-3. **Given** terminal, **When** running `20i` commands, **Then** they work identically to external terminal
-
----
-
-### Edge Cases
-
-- What happens when Docker is not installed or running?
-- How does the GUI handle multiple projects/stacks open simultaneously?
-- What happens when the GUI loses connection to Docker daemon?
-- How does the app handle large log volumes without performance degradation?
-
-## Requirements *(mandatory)*
+## Requirements *(lightweight, exploratory)*
 
 ### Functional Requirements
 
-- **FR-001**: App MUST support macOS (10.15+) and Windows (10+)
-- **FR-002**: App MUST provide Start/Stop buttons for stack control
-- **FR-003**: App MUST display current stack status (Running, Stopped, Starting)
-- **FR-004**: App MUST provide checkboxes for enabling/disabling optional services
-- **FR-005**: App MUST display live logs from selected containers
-- **FR-006**: App MUST detect and report port conflicts with resolution suggestions
-- **FR-007**: App MUST include built-in terminal for CLI command execution
-- **FR-008**: App MUST remember last used project directory
-- **FR-009**: App MUST be installable via standard methods (DMG for macOS, installer for Windows)
+- **FR-001**: If implemented, GUI SHOULD support macOS and Windows.
+- **FR-002**: GUI MUST delegate stack operations to the canonical CLI/TUI core.
+- **FR-003**: GUI SHOULD present the same status and error information as CLI/TUI.
+- **FR-004**: GUI MAY provide logs viewing by calling existing log streaming endpoints/commands.
 
 ### Key Entities
 
-- **Stack Instance**: Visual representation of a 20i stack with status, services, and controls
-- **Service Panel**: UI component showing optional services with toggle controls
-- **Log Viewer**: Real-time log display component with service selection and filtering
-- **Built-in Terminal**: Embedded terminal emulator for CLI command execution
+- **GUI Wrapper**: Desktop UI layer that invokes canonical CLI/TUI behaviour
+- **Project Context**: Selected working directory that drives stack operations
+- **Action Delegation**: Mechanism for calling CLI commands or shared Go library functions
 
-## Success Criteria *(mandatory)*
+## Success Criteria *(exploratory)*
 
-### Measurable Outcomes
-
-- **SC-001**: Users can start/stop stack within 3 clicks of app launch
-- **SC-002**: App launches in under 3 seconds on modern hardware
-- **SC-003**: Log streaming has less than 1 second latency
-- **SC-004**: App memory usage stays under 200MB during normal operation
-- **SC-005**: 90%+ of GUI users can complete basic tasks without consulting documentation
+- **SC-001**: No duplicated orchestration logic exists in the GUI layer.
+- **SC-002**: GUI actions produce identical results to running the equivalent CLI commands.
+- **SC-003**: The GUI can lag behind CLI/TUI feature growth without breaking correctness.
 
 ## Assumptions
 
-- Cross-platform GUI framework provides consistent experience (Electron, Tauri)
-- Docker provides accessible APIs for status and log streaming
-- Users have sufficient system resources for GUI application
-- Native application distribution is manageable for maintainers
+- The CLI/TUI remains stable and fully functional as the primary interface.
+- Any GUI work would be optional and not required for core project value.
+
+---</file>
