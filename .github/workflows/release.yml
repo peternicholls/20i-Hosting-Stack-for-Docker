@@ -17,76 +17,76 @@ on:
         default: false
 
 permissions:
-    contents: write
-    pull-requests: write
-    id-token: write
+  contents: write
+  pull-requests: write
+  id-token: write
 
 concurrency:
-    group: release-${{ github.ref }}
-    cancel-in-progress: false
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-    release-please:
-        runs-on: ubuntu-latest
-        outputs:
-            release_created: ${{ steps.release.outputs.release_created }}
-            tag_name: ${{ steps.release.outputs.tag_name }}
-            version: ${{ steps.release.outputs.version }}
-            upload_url: ${{ steps.release.outputs.upload_url }}
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Make validation scripts executable
-              run: chmod +x scripts/release/validate.sh scripts/release/version.sh
+      - name: Make validation scripts executable
+        run: chmod +x scripts/release/validate.sh scripts/release/version.sh
 
-            - name: Pre-release validation
-              if: github.event_name == 'workflow_dispatch'
-              run: |
-                  echo "🔍 Running pre-release validation..."
-                  scripts/release/validate.sh --all || {
-                    echo "❌ Validation failed. Release will not proceed."
-                    exit 1
-                  }
+      - name: Pre-release validation
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🔍 Running pre-release validation..."
+          scripts/release/validate.sh --all || {
+            echo "❌ Validation failed. Release will not proceed."
+            exit 1
+          }
 
-            - name: Run release-please
-              id: release
-              uses: googleapis/release-please-action@v4
-              with:
-                  release-type: simple
-                  config-file: release-please-config.json
-                  manifest-file: .release-please-manifest.json
-                  token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Release summary
-              if: steps.release.outputs.release_created == 'true'
-              run: |
-                  echo "✅ Release created successfully!"
-                  echo "📦 Version: ${{ steps.release.outputs.version }}"
-                  echo "🏷️  Tag: ${{ steps.release.outputs.tag_name }}"
-                  echo "🔗 Release URL: ${{ steps.release.outputs.html_url }}"
+      - name: Release summary
+        if: steps.release.outputs.release_created == 'true'
+        run: |
+          echo "✅ Release created successfully!"
+          echo "📦 Version: ${{ steps.release.outputs.version }}"
+          echo "🏷️  Tag: ${{ steps.release.outputs.tag_name }}"
+          echo "🔗 Release URL: ${{ steps.release.outputs.html_url }}"
 
-    build-artifacts:
-        needs: release-please
-        if: needs.release-please.outputs.release_created == 'true'
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  build-artifacts:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Make artifacts script executable
-              run: chmod +x scripts/release/artifacts.sh
+      - name: Make artifacts script executable
+        run: chmod +x scripts/release/artifacts.sh
 
-            - name: Build release artifacts
-              run: scripts/release/artifacts.sh ${{ needs.release-please.outputs.version }}
+      - name: Build release artifacts
+        run: scripts/release/artifacts.sh ${{ needs.release-please.outputs.version }}
 
-            - name: Upload release artifacts
-              uses: softprops/action-gh-release@v2
-              with:
-                  tag_name: ${{ needs.release-please.outputs.tag_name }}
-                  files: |
-                      dist/20i-stack-*.tar.gz
-                      dist/install.sh
-                      dist/checksums.sha256
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: |
+            dist/20i-stack-*.tar.gz
+            dist/install.sh
+            dist/checksums.sha256
