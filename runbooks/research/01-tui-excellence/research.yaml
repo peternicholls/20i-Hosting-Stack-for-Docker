@@ -1,0 +1,189 @@
+# Research Area: Real-World TUI Excellence Study
+# Research ID: R01
+
+metadata:
+  research_id: "R01"
+  title: "Real-World TUI Excellence Study"
+  research_type: "pattern_research"
+  created: "2025-12-28"
+  updated: "2025-12-28"
+  status: "complete"
+  priority: "P0"
+  estimated_hours: 4
+  actual_hours: 3.5
+  target_version: "v1.0.0"
+
+objectives:
+  primary:
+    - "Identify design patterns from excellent real-world TUI applications"
+    - "Understand navigation, information hierarchy, and interaction patterns"
+    - "Extract best practices for Bubble Tea framework usage"
+    - "Avoid common TUI mistakes that lead to messy, unusable interfaces"
+
+  secondary:
+    - "Gather visual design inspiration (colors, layouts, components)"
+    - "Identify performance patterns for responsive UIs"
+    - "Document error handling and feedback patterns"
+
+key_questions:
+  critical:
+    - question: "What navigation patterns do the best TUIs use (tabs, trees, stacks)?"
+      answer: "Panel-based layouts win for context-heavy apps like Docker managers. 3-panel design (navigation list left, main content center, detail/help bottom) used by lazydocker, k9s. Command mode (`:resource-name`) provides fast keyboard access. Tabs work for workflow apps (gh-dash) but panels are superior for 20i use case."
+      confidence: "HIGH"
+      sources:
+        - "lazydocker: 3-panel layout analysis"
+        - "k9s: command mode + panels"
+        - "lazygit: 5-panel advanced layout"
+
+    - question: "How do excellent TUIs handle information density without overwhelming users?"
+      answer: "Progressive disclosure: show summary in list (name, status, key metrics), full detail on selection. Color-coded status (green=running, red=error) for quick scanning. Limit to 5-7 columns in tables. Use visual hierarchy: bold headers, alternating rows, highlighted selection. Virtual scrolling for long lists."
+      confidence: "HIGH"
+      sources:
+        - "k9s: table design with color-coded status"
+        - "lazygit: minimal text, maximum info approach"
+        - "lazydocker: at-a-glance dashboard pattern"
+
+    - question: "What are the most effective patterns for multi-view/panel layouts?"
+      answer: "3-panel golden ratio: 20-25% navigation list (left), 75-80% main content (right/center), 2-3 line footer for help. Panel focus cycling with Tab/Shift-Tab. Single selection model (one panel active at a time with clear visual indicator). Header optional for context (cluster/project name)."
+      confidence: "HIGH"
+      sources:
+        - "lazydocker: 3-panel implementation"
+        - "k9s: panel + header bar pattern"
+        - "All apps: Tab cycling standard"
+
+    - question: "How should real-time updates be integrated without disrupting user focus?"
+      answer: "Background goroutines with `tea.Tick` for periodic updates (1-2s). Send messages via channels, handle in Update(). Never block Update() method with I/O. Throttle rendering to 30 FPS max. Use separate state for 'stale data' indicator if updates fail. Cancel background tasks on view switch."
+      confidence: "CERTAIN"
+      sources:
+        - "k9s: 1s refresh, no UI blocking"
+        - "Bubble Tea docs: tea.Cmd pattern"
+        - "gh-dash: async GraphQL with channels"
+
+  important:
+    - question: "What keyboard shortcuts/bindings are intuitive and discoverable?"
+      answer: "Global shortcuts consistent across views: `?`=help, `q`=quit, `Tab`=cycle, `/`=search, `Esc`=cancel. Context shortcuts: `j/k` or arrows for navigation, `Enter` to select, single letters for actions (s=start, r=restart, l=logs). Vim bindings as enhancement, not requirement. Show current shortcuts in footer."
+      confidence: "HIGH"
+      sources:
+        - "lazygit: consistent `d`=delete across all views"
+        - "k9s: `?` help shows context shortcuts"
+        - "All apps: arrow keys + vim bindings hybrid"
+
+    - question: "How do great TUIs provide contextual help?"
+      answer: "Two-level help: (1) Footer always shows 5-7 most important shortcuts for current view, (2) `?` key opens modal with all shortcuts grouped by category. Help is searchable/filterable. Empty states include hints ('No containers. Press r to refresh'). Status messages confirm actions ('Container nginx started')."
+      confidence: "MEDIUM"
+      sources:
+        - "lazygit: extensive help modal with categories"
+        - "k9s: footer + help modal pattern"
+        - "lazydocker: contextual action menus"
+
+    - question: "What are common pitfalls that make TUIs feel clunky or confusing?"
+      answer: "Top failures: (1) God object with all state - use component composition. (2) Blocking I/O in Update() - use tea.Cmd. (3) Inconsistent key bindings - `d` means different things. (4) Too many navigation levels - keep flat. (5) No visual hierarchy - everything looks the same. (6) Hidden features - no help system. (7) Poor errors - no context or recovery options."
+      confidence: "HIGH"
+      sources:
+        - "Common patterns across failed TUI attempts"
+        - "Bubble Tea anti-patterns documentation"
+        - "lazygit/lazydocker success factors (inverse)"
+    - name: "lazydocker"
+      url: "https://github.com/jesseduffield/lazydocker"
+      category: "docker-management"
+      relevance: "HIGH - Docker management TUI, directly related use case"
+      stars: "~30k+"
+
+    - name: "lazygit"
+      url: "https://github.com/jesseduffield/lazygit"
+      category: "git-management"
+      relevance: "HIGH - Complex state management, excellent UX"
+      stars: "~40k+"
+
+    - name: "k9s"
+      url: "https://github.com/derailed/k9s"
+      category: "kubernetes-management"
+      relevance: "HIGH - Real-time monitoring, complex navigation"
+      stars: "~23k+"
+
+    - name: "btop"
+      url: "https://github.com/aristocratos/btop"
+      category: "system-monitoring"
+      relevance: "MEDIUM - Real-time graphs, visual design"
+      stars: "~15k+"
+
+    - name: "spotify-tui"
+      url: "https://github.com/Rigellute/spotify-tui"
+      category: "media-player"
+      relevance: "MEDIUM - Multi-panel layout, keyboard navigation"
+      stars: "~16k+"
+
+    - name: "gh dash"
+      url: "https://github.com/dlvhdr/gh-dash"
+      category: "github-dashboard"
+      relevance: "HIGH - Built with Bubble Tea, modern patterns"
+      stars: "~6k+"
+
+    - name: "glow"
+      url: "https://github.com/charmbracelet/glow"
+      category: "markdown-viewer"
+      relevance: "MEDIUM - Bubble Tea reference, clean UI"
+      stars: "~14k+"
+
+  documentation:
+    - name: "Bubble Tea Docs"
+      url: "https://github.com/charmbracelet/bubbletea"
+      description: "Official Bubble Tea framework documentation and examples"
+
+    - name: "Bubbles Components"
+      url: "https://github.com/charmbracelet/bubbles"
+      description: "Official component library for Bubble Tea"
+
+    - name: "Lipgloss Styling"
+      url: "https://github.com/charmbracelet/lipgloss"
+      description: "Styling library for terminal UIs"
+
+  articles:
+    - title: "TUI Design Principles"
+      search_query: "terminal user interface design best practices"
+
+    - title: "Bubble Tea Architecture Patterns"
+      search_query: "bubble tea go tui patterns architecture"
+
+tasks:
+  - id: "T01"
+    title: "Analyze lazydocker and lazygit UX patterns"
+    description: "Study navigation, panels, keyboard shortcuts, and state management"
+    estimated_hours: 1.5
+    status: "todo"
+    dependencies: []
+
+  - id: "T02"
+    title: "Study k9s and gh-dash for real-time updates"
+    description: "Understand how they handle live data without disrupting UX"
+    estimated_hours: 1.0
+    status: "todo"
+    dependencies: []
+
+  - id: "T03"
+    title: "Review Bubble Tea examples and patterns"
+    description: "Study official examples and community patterns for framework best practices"
+    estimated_hours: 1.0
+    status: "todo"
+    dependencies: []
+
+  - id: "T04"
+    title: "Create design recommendations document"
+    description: "Synthesize findings into actionable design principles"
+    estimated_hours: 0.5
+    status: "todo"
+    dependencies: ["T01", "T02", "T03"]
+
+deliverables:
+  - "Comprehensive findings document with screenshots/examples"
+  - "Navigation pattern recommendations"
+  - "Layout and visual hierarchy guidelines"
+  - "Keyboard interaction standards"
+  - "Real-time update patterns"
+  - "Anti-patterns to avoid"
+
+notes:
+  - "Focus on applications with >5k stars and active maintenance"
+  - "Prioritize Docker/container management TUIs for direct relevance"
+  - "Look for Bubble Tea implementations as primary examples"
+  - "Document both what works and what doesn't work"

@@ -1,0 +1,134 @@
+# Bundle Manifest
+# SpecKit Research Agent v1.0.0
+
+bundle:
+  name: "speckit-research-agent"
+  version: "1.0.0"
+  schema_version: "1.0.0"
+  created: "2025-12-28"
+  description: "Project-agnostic research agent for SpecKit framework"
+
+metadata:
+  author: "SafeDownload Project"
+  license: "Same as SafeDownload"
+  repository: "https://github.com/peternicholls/SafeDownload"
+  documentation: "https://github.com/peternicholls/SafeDownload/tree/develop/.specify/bundles/research-agent"
+
+requirements:
+  git: ">=2.0"
+  yq: ">=4.0 (optional but recommended)"
+  bash: ">=4.0"
+
+files:
+  agents:
+    - path: "files/agents/speckit.research.agent.md"
+      destination: ".github/agents/speckit.research.agent.md"
+      description: "AI agent definition"
+      required: true
+
+  templates:
+    - path: "files/templates/research-template.yaml"
+      destination: ".specify/templates/research-template.yaml"
+      description: "Research area template"
+      required: true
+    - path: "files/templates/research-feedback-template.md"
+      destination: ".specify/templates/research-feedback-template.md"
+      description: "Integration feedback template"
+      required: true
+
+  scripts:
+    - path: "files/scripts/research.sh"
+      destination: ".specify/scripts/bash/research.sh"
+      description: "Helper script for research management"
+      required: true
+      executable: true
+    - path: "files/scripts/check-research-prerequisites.sh"
+      destination: ".specify/scripts/bash/check-research-prerequisites.sh"
+      description: "Prerequisites validation script"
+      required: true
+      executable: true
+
+  documentation:
+    - path: "files/docs/research-framework.md"
+      destination: ".specify/docs/research-framework.md"
+      description: "Generic methodology guide"
+      required: true
+    - path: "files/docs/research-agent-setup.md"
+      destination: ".specify/docs/research-agent-setup.md"
+      description: "Complete setup guide"
+      required: true
+    - path: "files/docs/agent-integration.md"
+      destination: ".specify/docs/agent-integration.md"
+      description: "Integration guide"
+      required: true
+
+  examples:
+    - path: "files/examples/default.yaml"
+      destination: ".specify/examples/research-configs/default.yaml"
+      description: "Generic balanced configuration"
+      required: true
+    - path: "files/examples/web-app.yaml"
+      destination: ".specify/examples/research-configs/web-app.yaml"
+      description: "Web application configuration"
+      required: true
+    - path: "files/examples/library.yaml"
+      destination: ".specify/examples/research-configs/library.yaml"
+      description: "Library/SDK configuration"
+      required: true
+    - path: "files/examples/infrastructure.yaml"
+      destination: ".specify/examples/research-configs/infrastructure.yaml"
+      description: "Infrastructure configuration"
+      required: true
+
+  context:
+    - path: "files/context/research-agent-context.yaml"
+      destination: ".specify/context/research-agent-context.yaml"
+      description: "Agent context and reference"
+      required: true
+
+installation:
+  methods:
+    - name: "Automated"
+      command: "./install.sh"
+      description: "Run the installation script"
+    - name: "Interactive"
+      command: "./install.sh --auto --project-type web-app"
+      description: "Non-interactive with project type"
+
+  post_install:
+    - step: "Customize configuration"
+      file: ".specify/config/research.yaml"
+      action: "Edit project name, paths, and decision criteria"
+    - step: "Verify installation"
+      command: ".specify/scripts/bash/check-research-prerequisites.sh"
+      action: "Check that all prerequisites are met"
+    - step: "Read documentation"
+      file: ".specify/docs/research-agent-setup.md"
+      action: "Learn how to use the research agent"
+
+compatibility:
+  speckit_version: ">=1.0"
+  projects:
+    - "Web applications"
+    - "Libraries and SDKs"
+    - "Infrastructure/DevOps"
+    - "CLI applications"
+    - "Mobile applications"
+    - "Generic projects"
+
+features:
+  - "Project-agnostic configuration"
+  - "Multiple project type templates"
+  - "Prerequisites validation"
+  - "Quality gates and completion criteria"
+  - "Integration feedback templates"
+  - "Constitution support (optional)"
+  - "Performance gates"
+  - "Decision tracking"
+  - "Research workflow automation"
+
+checksums:
+  # Run: find files -type f -exec sha256sum {} \; > checksums.txt
+  # or: find files -type f -exec shasum -a 256 {} \; > checksums.txt
+  file: "checksums.txt"
+  algorithm: "SHA256"

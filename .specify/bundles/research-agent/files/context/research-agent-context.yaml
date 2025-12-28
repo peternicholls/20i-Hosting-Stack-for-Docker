@@ -1,0 +1,584 @@
+# Research Agent Context
+# Complete context for the speckit.research agent
+#
+# This file is read by the research agent at startup to understand:
+# - Project configuration system
+# - Research methodology and standards
+# - Integration points with SpecKit
+# - How to adapt to different project types
+#
+# NOTE: This agent now uses a configuration-driven architecture.
+# Project-specific values are loaded from .specify/config/research.yaml
+
+# =============================================================================
+# CONFIGURATION SYSTEM
+# =============================================================================
+
+configuration:
+  # Primary configuration file (required)
+  config_file: ".specify/config/research.yaml"
+
+  # Configuration schema
+  schema_version: "1.0.0"
+  documentation: ".specify/docs/research-framework.md"
+
+  # Example configurations for different project types
+  examples:
+    - path: ".specify/examples/research-configs/default.yaml"
+      type: "Generic project template"
+    - path: ".specify/examples/research-configs/web-app.yaml"
+      type: "Web application"
+    - path: ".specify/examples/research-configs/library.yaml"
+      type: "Library/SDK"
+    - path: ".specify/examples/research-configs/infrastructure.yaml"
+      type: "Infrastructure/DevOps"
+
+  # Initialization
+  initialization:
+    command: ".specify/scripts/bash/research.sh init"
+    description: "Interactive setup for new projects"
+    creates:
+      - ".specify/config/research.yaml"
+      - "Research directory structure"
+
+# =============================================================================
+# FILE LOCATIONS (LOADED FROM CONFIG)
+# =============================================================================
+
+# NOTE: These paths are now loaded from .specify/config/research.yaml
+# The values below are for reference only (from SafeDownload configuration)
+
+paths:
+  # Research Infrastructure (from config.paths.research_root)
+  research_root: "{config.paths.research_root}" # e.g., "dev/research"
+  research_plan: "{config.paths.research_plan}" # e.g., "dev/research/research-plan.yaml"
+  research_template: "{config.paths.research_template}" # e.g., "dev/research/research-template.yaml"
+  decision_log: "{config.paths.decision_log}" # e.g., "dev/research/decision-log.yaml"
+
+  # Project Context (from config.paths.*)
+  constitution: "{config.paths.constitution}" # Optional, can be null
+  roadmap: "{config.paths.roadmap}" # Optional
+  feature_specs: "{config.paths.feature_specs}" # e.g., "dev/specs/features"
+  architecture_docs: "{config.paths.architecture_docs}" # e.g., "dev/architecture"
+  sprint_plans: "{config.paths.sprint_plans}" # e.g., "dev/sprints"
+
+  # Agent Files (standard locations)
+  agent_definition: ".github/agents/speckit.research.agent.md"
+  helper_script: ".specify/scripts/bash/research.sh"
+
+# =============================================================================
+# SAFEDOWNLOAD-SPECIFIC CONTEXT
+# =============================================================================
+# NOTE: This section is SafeDownload-specific and serves as a reference
+# Other projects will have different research areas
+
+project:
+  name: "SafeDownload"
+  type: "CLI Tool"
+
+# =============================================================================
+# RESEARCH AREAS (R01-R10)
+# =============================================================================
+
+research_areas:
+  # SafeDownload-specific research areas (10 total)
+  # Other projects will define their own areas in their config
+
+  R01:
+    folder: "01-go-http-client"
+    name: "Go HTTP Client Libraries"
+    focus: "HTTP client selection for Go core (grab vs stdlib)"
+    target_version: "1.0.0"
+    blocks: ["F011"]
+
+  R02:
+    folder: "02-bubble-tea-tui"
+    name: "Bubble Tea TUI Framework"
+    focus: "TUI architecture patterns, component design"
+    target_version: "1.1.0"
+    blocks: ["F014"]
+
+  R03:
+    folder: "03-rate-limiting"
+    name: "Rate Limiting Algorithms"
+    focus: "Token bucket vs leaky bucket, io.Reader wrapping"
+    target_version: "1.0.0"
+    blocks: ["F011"]
+
+  R04:
+    folder: "04-accessibility"
+    name: "Accessible Terminal UI Patterns"
+    focus: "Screen reader compatibility, WCAG terminal compliance"
+    target_version: "0.2.0"
+    blocks: ["F008", "F014"]
+
+  R05:
+    folder: "05-state-migration"
+    name: "State Migration Strategies"
+    focus: "JSON schema evolution, atomic file operations"
+    target_version: "1.0.0"
+    blocks: ["F010", "F011"]
+
+  R06:
+    folder: "06-gpg-verification"
+    name: "GPG Signature Verification"
+    focus: "Pure Go vs system gpg, key management UX"
+    target_version: "1.2.0"
+    blocks: ["F017"]
+
+  R07:
+    folder: "07-package-managers"
+    name: "Package Manager Publishing"
+    focus: "Homebrew, Debian, RPM packaging automation"
+    target_version: "1.3.0"
+    blocks: ["F021", "F022", "F023"]
+
+  R08:
+    folder: "08-rest-api"
+    name: "REST API Design Patterns"
+    focus: "Go framework selection, WebSocket vs SSE"
+    target_version: "2.0.0"
+    blocks: ["F025"]
+
+  R09:
+    folder: "09-plugin-system"
+    name: "Plugin System Architectures"
+    focus: "go-plugin vs subprocess vs WASM"
+    target_version: "1.2.0"
+    blocks: ["F020"]
+
+  R10:
+    folder: "10-cross-platform"
+    name: "Cross-Platform Distribution"
+    focus: "CGO avoidance, static linking, code signing"
+    target_version: "1.0.0"
+    blocks: ["F013"]
+
+# =============================================================================
+# RESEARCH METHODOLOGY (GENERIC - APPLIES TO ALL PROJECTS)
+# =============================================================================
+# This methodology is project-agnostic and works for any type of project
+
+methodology:
+  # Task Types (generic patterns)
+  task_types:
+    library_evaluation:
+      description: "Evaluate a library/framework for potential use"
+      applies_to: "All projects using external dependencies"
+      checklist:
+        - "Fetch repository metadata (stars, license, last update)"
+        - "Read documentation and examples"
+        - "Check dependency count and tree"
+        - "Review open issues (especially bugs)"
+        - "Find example projects using it"
+        - "Score against decision criteria (from config)"
+
+    pattern_research:
+      description: "Research implementation patterns or approaches"
+      applies_to: "Architecture and design decisions"
+      checklist:
+        - "Search for authoritative sources"
+        - "Study reference implementations"
+        - "Extract code examples"
+        - "Document pros/cons"
+        - "Note when to use/avoid"
+
+    architecture_design:
+      description: "Research system architecture approaches"
+      applies_to: "Infrastructure, platform, and system design"
+      checklist:
+        - "Identify requirements and constraints"
+        - "Research existing solutions"
+        - "Compare architectural patterns"
+        - "Document trade-offs"
+        - "Recommend approach with rationale"
+
+    tool_selection:
+      description: "Select tools for development/operations"
+      applies_to: "DevOps, infrastructure, development workflows"
+      checklist:
+        - "List candidates based on requirements"
+        - "Evaluate against criteria (from config)"
+        - "Test key features if possible"
+        - "Check community and support"
+        - "Document decision rationale"
+
+    ecosystem_research:
+      description: "Research ecosystem, community, or standards"
+      applies_to: "Technology selection, standards compliance"
+      checklist:
+        - "Identify key players and projects"
+        - "Review standards and best practices"
+        - "Map ecosystem relationships"
+        - "Note trends and direction"
+        - "Identify gaps or opportunities"
+
+    documentation_review:
+      description: "Gather and synthesize documentation"
+      applies_to: "All research tasks"
+      checklist:
+        - "Identify official documentation"
+        - "Extract relevant sections"
+        - "Note version-specific info"
+        - "Identify gaps requiring further research"
+
+  # Confidence Levels (universal)
+  confidence_levels:
+    CERTAIN:
+      definition: "100% confident, verified from authoritative source"
+      when_to_use: "Official docs, tested locally, consensus across sources"
+    HIGH:
+      definition: "90%+ confident, strong evidence"
+      when_to_use: "Multiple reliable sources agree, fits known patterns"
+    MEDIUM:
+      definition: "70-90% confident, some uncertainty"
+      when_to_use: "Single good source, or extrapolating from similar cases"
+    LOW:
+      definition: "<70% confident, significant uncertainty"
+      when_to_use: "Limited sources, conflicting information, inference"
+
+  # Source Credibility
+  source_ranking:
+    tier_1:
+      - "Official documentation"
+      - "Source code"
+      - "Project maintainer communications"
+    tier_2:
+      - "Well-known technical blogs"
+      - "Conference talks by experts"
+      - "Reputable books"
+    tier_3:
+      - "Stack Overflow (accepted answers)"
+      - "Community blog posts"
+      - "GitHub issues/discussions"
+
+# =============================================================================
+# DECISION CRITERIA (LOADED FROM CONFIG)
+# =============================================================================
+# NOTE: These values are now loaded from .specify/config/research.yaml
+# Each project defines its own criteria based on priorities
+
+decision_criteria:
+  # Weights (from config.decision_criteria.weights)
+  # Example for SafeDownload (other projects will differ):
+  weights:
+    constitution_alignment: "{config.decision_criteria.weights.constitution_alignment}" # 25 for SafeDownload
+    performance: "{config.decision_criteria.weights.performance}" # 20 for SafeDownload
+    maintainability: "{config.decision_criteria.weights.maintainability}" # 20 for SafeDownload
+    developer_experience: "{config.decision_criteria.weights.developer_experience}" # 15 for SafeDownload
+    community_support: "{config.decision_criteria.weights.community_support}" # 10 for SafeDownload
+    dependency_footprint: "{config.decision_criteria.weights.dependency_footprint}" # 10 for SafeDownload
+
+  # Scoring (from config.decision_criteria.scoring)
+  scoring:
+    scale: "{config.decision_criteria.scoring.scale}" # e.g., "0-100"
+    pass_threshold: "{config.decision_criteria.scoring.pass_threshold}" # e.g., 60
+    recommend_threshold: "{config.decision_criteria.scoring.recommend_threshold}" # e.g., 75
+
+  # Constitution Principles (from config.constitution_principles, if present)
+  # Only applicable if project has a constitution file
+  constitution_principles:
+    note: "Loaded from config if constitution path is not null"
+    # SafeDownload example (for reference):
+    # I: "Resumable Downloads - resume as core feature"
+    # II: "Optional Features - enhanced features must be optional"
+    # ... etc
+
+  # Performance Gates (from config.performance_gates)
+  # Project-specific performance requirements
+  performance_gates:
+    note: "Loaded from config based on project type"
+    # SafeDownload example: tui_startup: "<500ms"
+    # Web app example: page_load: "<2s"
+    # Library example: bundle_size: "<50kb"
+
+# =============================================================================
+# OUTPUT FORMATS
+# =============================================================================
+
+output_formats:
+  library_comparison:
+    template: |
+      | Aspect | {lib_a} | {lib_b} | {lib_c} |
+      |--------|---------|---------|---------|
+      | Stars | {stars_a} | {stars_b} | {stars_c} |
+      | License | {license_a} | {license_b} | {license_c} |
+      | Last Update | {update_a} | {update_b} | {update_c} |
+      | Dependencies | {deps_a} | {deps_b} | {deps_c} |
+      | {feature} Support | {support_a} | {support_b} | {support_c} |
+      | Learning Curve | {curve_a} | {curve_b} | {curve_c} |
+      | **Score** | **{score_a}** | **{score_b}** | **{score_c}** |
+
+  question_answer:
+    template: |
+      ### Q: {question}
+
+      **Answer**: {answer}
+
+      **Confidence**: {confidence}
+
+      **Sources**:
+      {sources_list}
+
+      **Caveats**:
+      {caveats_list}
+
+  decision_summary:
+    template: |
+      ## Decision: {title}
+
+      **Selection**: {selection}
+
+      **Rationale**: {rationale}
+
+      **Trade-offs Accepted**:
+      {tradeoffs_list}
+
+      **Fallback Plan**: {fallback}
+
+# =============================================================================
+# INTEGRATION WORKFLOW (GENERIC)
+# =============================================================================
+# Describes how research agent integrates with other speckit agents
+
+integration:
+  # Integration with speckit agent family
+  speckit_agents:
+    - agent: "speckit.constitution"
+      when: "Check alignment with project principles"
+      data_flow: "Reads constitution file (if present)"
+
+    - agent: "speckit.specify"
+      when: "Research informs feature specifications"
+      data_flow: "Provides technical constraints and recommendations"
+
+    - agent: "speckit.clarify"
+      when: "Research answers technical questions"
+      data_flow: "Provides answers with confidence levels and sources"
+
+    - agent: "speckit.plan"
+      when: "Research unblocks planning"
+      data_flow: "Updates sprint blockers, provides estimates"
+
+    - agent: "speckit.tasks"
+      when: "Research defines implementation approach"
+      data_flow: "Informs task breakdown and technical requirements"
+
+    - agent: "speckit.implement"
+      when: "Research provides implementation guidance"
+      data_flow: "Libraries, patterns, code examples"
+
+    - agent: "speckit.analyze"
+      when: "Research validates architectural decisions"
+      data_flow: "Architecture patterns, trade-off analysis"
+
+    - agent: "speckit.checklist"
+      when: "Research impacts compliance checklists"
+      data_flow: "Standards, security practices, accessibility requirements"
+
+    - agent: "speckit.taskstoissues"
+      when: "Research creates actionable tasks"
+      data_flow: "Task definitions ready for issue creation"
+
+  # Standard completion workflow
+  on_complete:
+    steps:
+      - action: "Update research.yaml status to 'complete'"
+        fields:
+          - "metadata.status"
+          - "metadata.actual_hours"
+          - "metadata.completed"
+
+      - action: "Update research-plan.yaml (if exists)"
+        condition: "Project uses research-plan.yaml"
+        fields:
+          - "research_areas[id].status"
+          - "research_areas[id].actual_hours"
+          - "research_areas[id].completed_date"
+
+      - action: "Add decision to decision-log.yaml (if applicable)"
+        condition: "Research produces clear recommendation"
+        fields:
+          - "decisions[] (new entry)"
+
+      - action: "Update affected specifications"
+        condition: "Research impacts feature specs or architecture"
+        targets:
+          - "Feature spec files (from config.paths.feature_specs)"
+          - "Architecture docs (from config.paths.architecture_docs)"
+
+  # Files that may be affected (project-specific paths from config)
+  affected_files:
+    feature_specs:
+      pattern: "{config.paths.feature_specs}/*.yaml"
+      section: "implementation or technical_details"
+      update_trigger: "Library selection or architecture decision"
+
+    architecture_docs:
+      pattern: "{config.paths.architecture_docs}/*.md"
+      update_trigger: "Significant architecture insight"
+
+    sprint_plans:
+      pattern: "{config.paths.sprint_plans}/*.yaml"
+      update_trigger: "Research unblocks sprint tasks"
+      action: "Remove pending_research blockers"
+
+# =============================================================================
+# AGENT BEHAVIOR RULES (GENERIC)
+# =============================================================================
+# Universal rules that apply to all projects
+
+behavior:
+  # What the agent MUST do
+  requirements:
+    - "Always load configuration from .specify/config/research.yaml first"
+    - "Always check constitution alignment if constitution file exists"
+    - "Always cite sources with URLs"
+    - "Always record confidence levels for answers"
+    - "Always update all affected status files"
+    - "Always present research brief before starting"
+    - "Always offer next steps after completion"
+    - "Always respect project-specific decision criteria weights"
+
+  # What the agent MUST NOT do
+  prohibitions:
+    - "Do not assume project structure - load from config"
+    - "Do not recommend options that violate constitution (if present)"
+    - "Do not skip questions - mark as LOW confidence if uncertain"
+    - "Do not proceed without user confirmation (unless --auto flag)"
+    - "Do not modify files outside research directory without noting"
+    - "Do not use hardcoded paths - always read from config"
+
+  # General preferences (can be overridden by project config)
+  default_preferences:
+    - "Prefer official documentation over community sources"
+    - "Prefer well-maintained libraries (commits in last 6 months)"
+    - "Prefer permissive licenses (MIT/BSD/Apache)"
+    - "Prefer libraries with good documentation"
+    - "Prefer solutions with active communities"
+
+  # Project-specific preferences loaded from config
+  project_preferences:
+    note: "Loaded from config.behavior.preferences"
+    # Example for SafeDownload:
+    # - "Prefer stdlib over external dependencies"
+    # Example for web app:
+    # - "Prefer battle-tested security libraries"
+
+  # Error handling
+  error_handling:
+    question_unanswerable:
+      action: "Record as LOW confidence with explanation"
+      next: "Add to 'Open Questions' in findings.md"
+
+    library_unmaintained:
+      threshold: "No commits in 12 months"
+      action: "Flag as risk in evaluation"
+      recommendation: "Consider alternatives or forking"
+
+    conflicting_sources:
+      action: "Document all perspectives"
+      next: "Recommend local testing to verify"
+
+# =============================================================================
+# VERSION MAPPING (SAFEDOWNLOAD-SPECIFIC)
+# =============================================================================
+# NOTE: This is SafeDownload's version-to-research mapping
+# Other projects will have different mappings based on their roadmap
+
+safedownload_version_map:
+  "0.2.0":
+    name: "Shield"
+    required_research: ["R04"]
+    description: "Accessibility research needed for basic TUI"
+
+  "1.0.0":
+    name: "Phoenix"
+    required_research: ["R01", "R03", "R05", "R10"]
+    description: "Go core migration research"
+
+  "1.1.0":
+    name: "Bubble"
+    required_research: ["R02"]
+    description: "Bubble Tea TUI framework research"
+
+  "1.2.0":
+    name: "Velocity"
+    required_research: ["R06", "R09"]
+    description: "GPG and plugin system research"
+
+  "1.3.0":
+    name: "Ecosystem"
+    required_research: ["R07"]
+    description: "Package manager research"
+
+  "2.0.0":
+    name: "Horizon"
+    required_research: ["R08"]
+    description: "REST API research"
+
+# =============================================================================
+# MIGRATION GUIDE
+# =============================================================================
+# For adapting this agent to new projects
+
+migration:
+  new_project_setup:
+    steps:
+      - step: 1
+        action: "Run initialization"
+        command: ".specify/scripts/bash/research.sh init"
+        result: "Creates .specify/config/research.yaml"
+
+      - step: 2
+        action: "Review and customize configuration"
+        file: ".specify/config/research.yaml"
+        customize:
+          - "Set project-specific paths"
+          - "Define decision criteria weights"
+          - "Add constitution principles (if applicable)"
+          - "Set performance gates"
+          - "Define research types needed"
+
+      - step: 3
+        action: "Create research structure"
+        creates:
+          - "Research root directory"
+          - "research-plan.yaml (optional)"
+          - "decision-log.yaml (optional)"
+
+      - step: 4
+        action: "Define research areas"
+        note: "Based on project roadmap and blockers"
+
+      - step: 5
+        action: "Test agent"
+        command: "@speckit.research --help"
+        verify: "Agent loads config successfully"
+
+  example_configurations:
+    - type: "Web Application"
+      config: ".specify/examples/research-configs/web-app.yaml"
+      priorities: "security, scalability, user_experience"
+
+    - type: "Library/SDK"
+      config: ".specify/examples/research-configs/library.yaml"
+      priorities: "api_design, backward_compatibility, documentation"
+
+    - type: "Infrastructure"
+      config: ".specify/examples/research-configs/infrastructure.yaml"
+      priorities: "reliability, operational_complexity, cost"
+
+    - type: "CLI Tool"
+      config: ".specify/config/research.yaml" # SafeDownload
+      priorities: "constitution_alignment, performance, maintainability"
+
+  adaptation_checklist:
+    - "✓ .specify/config/research.yaml created and customized"
+    - "✓ Research directory structure created"
+    - "✓ Constitution file referenced (if applicable)"
+    - "✓ Decision criteria weights reflect project priorities"
+    - "✓ Performance gates match project requirements"
+    - "✓ Research types align with project needs"
+    - "✓ Agent tested and loads config successfully"
+    - "✓ Integration with other speckit agents verified"

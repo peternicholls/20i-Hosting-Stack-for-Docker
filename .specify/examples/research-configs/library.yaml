@@ -1,0 +1,102 @@
+# Research Agent Configuration - Library/SDK
+# Optimized for library and SDK projects
+#
+# Schema Version: 1.0.0
+
+metadata:
+  project_name: "MyLibrary"
+  project_type: "Library/SDK"
+  schema_version: "1.0.0"
+
+paths:
+  research_root: "research"
+  research_plan: "research/research-plan.yaml"
+  research_template: ".specify/templates/research-template.yaml"
+  research_feedback_template: ".specify/templates/research-feedback-template.md"
+  decision_log: "research/decision-log.yaml"
+  constitution: "docs/principles.md"
+  feature_specs: "specs"
+  architecture_docs: "docs/design"
+  sprint_plans: null # Libraries often don't use sprints
+
+# Libraries prioritize API design and compatibility
+decision_criteria:
+  weights:
+    api_design: 30 # Most important for libraries
+    backward_compatibility: 25 # Don't break users
+    documentation: 20 # Critical for adoption
+    dependency_footprint: 15 # Keep it small
+    performance: 10
+
+  scoring:
+    scale: "0-100"
+    pass_threshold: 70 # Higher bar for libraries
+    recommend_threshold: 85
+
+# Library-specific quality gates
+performance_gates:
+  bundle_size: "<50kb" # Keep it lightweight
+  tree_shakeable: "yes"
+  typescript_support: "yes"
+
+methodology:
+  confidence_levels:
+    - level: "CERTAIN"
+      definition: "Validated with library users, documented"
+    - level: "HIGH"
+      definition: "Common library pattern, multiple examples"
+    - level: "MEDIUM"
+      definition: "Works but may have edge cases"
+    - level: "LOW"
+      definition: "Experimental or untested with users"
+
+  task_types:
+    - name: "api_design_research"
+      description: "Research API ergonomics and patterns"
+      typical_duration: "4-6 hours"
+    - name: "ecosystem_compatibility"
+      description: "Test compatibility with popular tools"
+      typical_duration: "3-4 hours"
+    - name: "migration_path_analysis"
+      description: "Plan for version migrations"
+      typical_duration: "2-3 hours"
+
+research_types:
+  - type: "api_design_research"
+    description: "Design library public API"
+    deliverables:
+      - "API proposal"
+      - "Usage examples"
+      - "Migration guide"
+  - type: "ecosystem_research"
+    description: "Research ecosystem compatibility"
+    deliverables:
+      - "Compatibility matrix"
+      - "Integration examples"
+      - "Known limitations"
+
+integration:
+  handoff_agents:
+    - agent: "speckit.plan"
+      when: "API design finalized"
+    - agent: "speckit.specify"
+      when: "Breaking changes proposed"
+
+behavior:
+  requirements:
+    - "Always consider backward compatibility impact"
+    - "Always document public APIs thoroughly"
+    - "Always test with major frameworks/tools"
+
+  preferences:
+    - "Prefer zero dependencies"
+    - "Prefer TypeScript for type safety"
+    - "Prefer semantic versioning"
+    - "Prefer clear migration paths"
+
+notes:
+  - "API design is the most important decision"
+  - "Breaking changes require major version bump"
+  - "Documentation quality drives adoption"
+  - "Keep bundle size minimal"
+  - "Support tree-shaking for optimal builds"

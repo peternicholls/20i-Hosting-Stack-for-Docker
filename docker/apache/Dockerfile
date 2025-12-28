@@ -22,13 +22,11 @@ RUN apk add --no-cache \
     mysqli \
     pdo_mysql \
     zip \
-    curl \
     mbstring \
     exif \
-    bcmath \
-    opcache
+    bcmath
 
-# Note: fileinfo and iconv are already built into PHP 8.5
+# Note: opcache, fileinfo, iconv, and curl are already built into PHP 8.5
 # No need to install them separately
 
 # Copy custom PHP configuration

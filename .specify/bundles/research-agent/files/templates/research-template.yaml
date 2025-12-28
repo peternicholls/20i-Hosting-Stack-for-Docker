@@ -1,0 +1,379 @@
+# Research Area Template
+# Copy this file to dev/research/XX-area-name/research.yaml
+# and fill in the sections for your research area.
+#
+# Schema Version: 1.0.0
+# Created: 2025-12-25
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+metadata:
+  # Unique identifier (R01, R02, etc.)
+  id: "R00"
+
+  # Human-readable name
+  name: "Research Area Name"
+
+  # Folder name within {research_root}
+  folder: "00-area-name"
+
+  # Research type (from config research_types)
+  research_type: "library_evaluation" # library_evaluation | pattern_research | architecture_design | tool_selection | ecosystem_research
+
+  # Target project version this research supports
+  target_version: "X.Y.Z"
+
+  # Priority: P0 (blocks implementation), P1 (high), P2 (medium), P3 (low)
+  priority: "P1"
+
+  # Status: not_started | in_progress | completed | blocked
+  status: "not_started"
+
+  # Estimated time in hours
+  estimated_hours: 0
+
+  # Actual time spent (update as you go)
+  actual_hours: 0
+
+  # Person or team assigned to this research
+  assigned_to: null
+
+  # Stakeholder who requested this research (optional)
+  stakeholder: null
+
+  # Features this research blocks (use project's feature ID format)
+  blocks:
+    - id: "001" # Feature ID (format defined by project)
+      name: "Feature Name"
+
+  # Research areas this depends on
+  depends_on: []
+
+  # Dates
+  created: "YYYY-MM-DD"
+  updated: "YYYY-MM-DD"
+  started: null
+  completed: null
+
+# =============================================================================
+# RESEARCH OBJECTIVES
+# =============================================================================
+
+objectives:
+  # Primary goals (must achieve)
+  primary:
+    - goal: "First primary objective"
+      description: "Detailed description of what this achieves"
+      success_criteria: "How we know this is complete"
+      status: "not_started" # not_started | in_progress | completed
+
+    - goal: "Second primary objective"
+      description: "Detailed description"
+      success_criteria: "Measurable outcome"
+      status: "not_started"
+
+  # Secondary goals (nice to have)
+  secondary:
+    - goal: "Optional objective"
+      description: "Additional research if time permits"
+      success_criteria: "How we know this is complete"
+      status: "not_started"
+
+# =============================================================================
+# KEY QUESTIONS
+# =============================================================================
+
+key_questions:
+  # Critical questions that must be answered
+  critical:
+    - question: "What is the critical question?"
+      context: "Why this question matters"
+      answer: null # Fill in after research
+      confidence: null # high | medium | low
+      sources: [] # Links to evidence
+
+  # Important questions to investigate
+  important:
+    - question: "What is an important question?"
+      context: "Background context"
+      answer: null
+      confidence: null
+      sources: []
+
+  # Questions that would be nice to answer
+  exploratory:
+    - question: "What would be nice to know?"
+      context: "Why it might be useful"
+      answer: null
+      confidence: null
+      sources: []
+
+# =============================================================================
+# SOURCES TO INVESTIGATE
+# =============================================================================
+
+sources:
+  # Libraries to evaluate
+  libraries:
+    - name: "library-name"
+      url: "https://github.com/org/repo"
+      stars: null # GitHub stars (as of date)
+      license: "MIT"
+      last_commit: null # Date of last commit
+      relevance: "Why this library might be useful"
+      evaluation_status: "not_evaluated" # not_evaluated | evaluating | evaluated
+      evaluation_notes: null
+      recommendation: null # use | consider | avoid
+
+  # Documentation to read
+  documentation:
+    - name: "Documentation name"
+      url: "https://example.com/docs"
+      type: "official" # official | tutorial | blog | video
+      relevance: "What we'll learn from this"
+      read_status: "not_read" # not_read | reading | read
+      notes: null
+
+  # Open source projects to study
+  projects:
+    - name: "Project name"
+      url: "https://github.com/org/project"
+      stars: null
+      relevance: "What patterns we can learn"
+      study_status: "not_studied" # not_studied | studying | studied
+      key_files: [] # Important files to examine
+      notes: null
+
+  # People/organizations to follow
+  experts:
+    - name: "Person or Org name"
+      url: "https://example.com"
+      expertise: "What they're known for"
+      notes: null
+
+# =============================================================================
+# CONSTITUTION ALIGNMENT (Optional - only if project has constitution)
+# =============================================================================
+
+constitution_alignment:
+  # Which constitution principles this research relates to
+  # Use principle IDs from .specify/config/research.yaml
+  principles:
+    - id: "PRINCIPLE_ID" # From config constitution_principles
+      name: "Principle Name"
+      relevance: "How this research relates to this principle"
+      compliance_notes: null # Fill in with findings
+
+  # Performance or quality gates this research informs
+  # Use gates from .specify/config/research.yaml
+  gates:
+    - gate: "Gate Name" # From config performance_gates
+      requirement: "<threshold"
+      research_relevance: "How research informs this gate"
+      findings: null
+
+  # Potential constitution conflicts to watch for
+  conflicts:
+    - principle: "PRINCIPLE_ID"
+      concern: "Description of potential conflict"
+      resolution: null # How we resolved/will resolve
+
+# =============================================================================
+# TASKS AND PROGRESS
+# =============================================================================
+
+tasks:
+  # Break research into concrete tasks
+  - id: "T001"
+    description: "First research task"
+    estimated_hours: 1
+    actual_hours: 0
+    status: "not_started" # not_started | in_progress | completed | blocked
+    blocker: null
+    notes: null
+    completed_date: null
+
+  - id: "T002"
+    description: "Second research task"
+    estimated_hours: 1
+    actual_hours: 0
+    status: "not_started"
+    blocker: null
+    notes: null
+    completed_date: null
+
+# =============================================================================
+# FINDINGS
+# =============================================================================
+
+findings:
+  # Key discoveries (update as research progresses)
+  discoveries:
+    - id: "D001"
+      date: null
+      title: "Finding title"
+      description: "What was discovered"
+      significance: "high" # high | medium | low
+      source: "Where this came from"
+      source_url: null
+      implications: "What this means for implementation"
+      quotes: [] # Notable quotes from sources
+
+  # Comparisons (for library/approach evaluations)
+  comparisons:
+    - category: "Category name"
+      options:
+        - name: "Option A"
+          pros: []
+          cons: []
+          score: null # 1-10
+        - name: "Option B"
+          pros: []
+          cons: []
+          score: null
+
+  # Code examples discovered
+  code_examples:
+    - title: "Example title"
+      source: "Where this came from"
+      source_url: null
+      language: "go"
+      code: |
+        // Example code here
+      notes: "Why this example is useful"
+
+  # Performance benchmarks
+  benchmarks:
+    - name: "Benchmark name"
+      methodology: "How measured"
+      results:
+        - option: "Option A"
+          metric: "100ms"
+        - option: "Option B"
+          metric: "150ms"
+      notes: "Interpretation"
+
+# =============================================================================
+# DECISIONS
+# =============================================================================
+
+decisions:
+  # Decisions made based on research
+  - id: "DEC001"
+    date: null
+    title: "Decision title"
+    question: "What question does this answer?"
+    options_considered:
+      - name: "Option A"
+        summary: "Brief description"
+      - name: "Option B"
+        summary: "Brief description"
+    chosen: null # Which option was chosen
+    rationale: "Why this option was chosen"
+    confidence: null # high | medium | low
+    reversibility: null # easy | moderate | difficult
+    impacts:
+      - document: "Feature spec"
+        path: "{feature_specs}/F000.yaml" # Use paths from config
+        change: "What needs to change"
+      - document: "Architecture doc"
+        path: "{architecture_docs}/component.md" # Use paths from config
+        change: "What needs to change"
+    approved_by: null
+    approval_date: null
+
+# =============================================================================
+# RISKS AND MITIGATIONS
+# =============================================================================
+
+risks:
+  - id: "RISK001"
+    title: "Risk description"
+    probability: "medium" # low | medium | high
+    impact: "high" # low | medium | high
+    mitigation: "How to address this risk"
+    status: "identified" # identified | mitigated | accepted
+
+# =============================================================================
+# NEXT STEPS
+# =============================================================================
+
+next_steps:
+  # What to do after research is complete
+  immediate:
+    - action: "Immediate action"
+      owner: null
+      due_date: null
+      status: "not_started"
+
+  follow_up:
+    - action: "Follow-up action"
+      owner: null
+      due_date: null
+      status: "not_started"
+
+# =============================================================================
+# INTEGRATION
+# =============================================================================
+
+integration:
+  # How findings integrate into project
+  # Use paths and patterns from .specify/config/research.yaml
+  feature_specs:
+    - feature_id: "001" # Project's feature ID format
+      feature_name: "Feature name"
+      updates_required:
+        - section: "implementation.packages"
+          change: "What to update"
+          status: "pending" # pending | completed
+
+  architecture_docs:
+    - doc: "architecture-doc.md" # File in {architecture_docs}
+      updates_required:
+        - section: "Technology Stack"
+          change: "What to update"
+          status: "pending"
+
+  decision_log:
+    - decision_id: "D001"
+      update_required: "Add new decision entry"
+      status: "pending"
+
+# =============================================================================
+# LOG
+# =============================================================================
+
+log:
+  # Chronological log of research activities
+  entries:
+    - date: "YYYY-MM-DD"
+      time_spent: 0 # hours
+      activities: "What was done"
+      findings_added: [] # IDs of findings added
+      decisions_made: [] # IDs of decisions made
+      blockers: null
+      next_session: "What to do next"
+
+# =============================================================================
+# SUMMARY (fill in when complete)
+# =============================================================================
+
+summary:
+  # Executive summary of research
+  executive_summary: null
+
+  # Key recommendations
+  recommendations: []
+
+  # Open questions remaining
+  open_questions: []
+
+  # Confidence level in conclusions
+  overall_confidence: null # high | medium | low
+
+  # Final status
+  completion_date: null
+  reviewed_by: null
+  review_date: null

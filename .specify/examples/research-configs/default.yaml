@@ -1,0 +1,206 @@
+# Research Agent Configuration Template
+# This is the default template for any project type
+#
+# Schema Version: 1.0.0
+# Copy this file to .specify/config/research.yaml and customize for your project
+
+metadata:
+  project_name: "MyProject" # Your project name
+  project_type: "Application" # Application | Library | CLI | Web App | Service
+  schema_version: "1.0.0"
+  created: "YYYY-MM-DD"
+  updated: "YYYY-MM-DD"
+
+# =============================================================================
+# FILE PATHS (relative to project root)
+# =============================================================================
+
+paths:
+  # Research infrastructure
+  research_root: "research"
+  research_plan: "research/research-plan.yaml"
+  research_template: ".specify/templates/research-template.yaml"
+  research_feedback_template: ".specify/templates/research-feedback-template.md"
+  decision_log: "research/decision-log.yaml"
+
+  # Project context (optional)
+  constitution: null # Path to constitution.md or null if none
+  roadmap: null # Path to roadmap file or null
+
+  # Integration targets
+  feature_specs: "specs" # Where feature specs live
+  architecture_docs: "docs/architecture" # Architecture documentation
+  sprint_plans: null # Sprint plans (optional)
+
+# =============================================================================
+# DECISION CRITERIA (must sum to 100)
+# =============================================================================
+
+decision_criteria:
+  weights:
+    quality: 30 # Overall quality and correctness
+    performance: 25 # Speed and resource usage
+    maintainability: 20 # Easy to maintain and evolve
+    usability: 15 # Developer/user experience
+    cost: 10 # Financial or resource cost
+
+  scoring:
+    scale: "0-100"
+    pass_threshold: 60 # Minimum acceptable score
+    recommend_threshold: 75 # Recommended score
+
+# =============================================================================
+# CONSTITUTION PRINCIPLES (optional)
+# =============================================================================
+# Only include if your project has a constitution
+
+constitution_principles: []
+# Example:
+#  - id: "PRINCIPLE_1"
+#    name: "Principle Name"
+#    description: "What this principle means"
+#    weight: "critical | high | medium | low"
+
+# =============================================================================
+# PERFORMANCE GATES (optional)
+# =============================================================================
+# Only include if you have quantitative performance requirements
+
+performance_gates: {}
+# Example:
+#  startup_time: "<500ms"
+#  api_response: "<200ms"
+
+# =============================================================================
+# RESEARCH METHODOLOGY
+# =============================================================================
+
+methodology:
+  confidence_levels:
+    - level: "CERTAIN"
+      definition: "100% confident, verified from authoritative source"
+      when_to_use: "Official docs, tested locally, consensus across sources"
+
+    - level: "HIGH"
+      definition: "90%+ confident, strong evidence"
+      when_to_use: "Multiple reliable sources agree, fits known patterns"
+
+    - level: "MEDIUM"
+      definition: "70-90% confident, some uncertainty"
+      when_to_use: "Single good source, or extrapolating from similar cases"
+
+    - level: "LOW"
+      definition: "<70% confident, significant uncertainty"
+      when_to_use: "Limited sources, conflicting information, inference"
+
+  source_ranking:
+    tier_1:
+      - "Official documentation"
+      - "Source code"
+      - "Project maintainer communications"
+    tier_2:
+      - "Technical blogs from known sources"
+      - "Conference talks by experts"
+      - "Reputable books"
+    tier_3:
+      - "Community forums"
+      - "Stack Overflow"
+      - "Blog posts"
+
+  task_types:
+    - name: "library_evaluation"
+      description: "Evaluate a library/framework for potential use"
+      typical_duration: "2-4 hours"
+
+    - name: "pattern_research"
+      description: "Research implementation patterns or approaches"
+      typical_duration: "1-3 hours"
+
+    - name: "documentation_review"
+      description: "Gather and synthesize documentation"
+      typical_duration: "1-2 hours"
+
+# =============================================================================
+# RESEARCH TYPES
+# =============================================================================
+
+research_types:
+  - type: "library_evaluation"
+    description: "Evaluate external libraries for use"
+    deliverables:
+      - "Comparison matrix"
+      - "Scoring against criteria"
+      - "Recommendation with rationale"
+
+  - type: "pattern_research"
+    description: "Research implementation patterns"
+    deliverables:
+      - "Pattern documentation"
+      - "Code examples"
+      - "Pros/cons analysis"
+
+  - type: "architecture_design"
+    description: "Research architectural approaches"
+    deliverables:
+      - "Architecture comparison"
+      - "Trade-off analysis"
+      - "Decision recommendation"
+
+# =============================================================================
+# INTEGRATION WITH SPECKIT AGENTS
+# =============================================================================
+
+integration:
+  handoff_agents:
+    - agent: "speckit.plan"
+      when: "Research findings inform technical approach"
+      data_passed: "Decisions, library choices, patterns"
+
+    - agent: "speckit.specify"
+      when: "Research updates feature requirements"
+      data_passed: "Implementation constraints, technical requirements"
+
+  update_targets:
+    - type: "feature_spec"
+      pattern: "{feature_specs}/*.yaml"
+      sections:
+        - "implementation"
+
+    - type: "architecture"
+      pattern: "{architecture_docs}/*.md"
+      sections:
+        - "Technology Stack"
+        - "Design Decisions"
+
+    - type: "decision"
+      pattern: "{decision_log}"
+      sections:
+        - "decisions[]"
+
+# =============================================================================
+# AGENT BEHAVIOR
+# =============================================================================
+
+behavior:
+  requirements:
+    - "Always cite sources with URLs"
+    - "Always record confidence levels for answers"
+    - "Always update all affected status files"
+    - "Always present research brief before starting"
+
+  prohibitions:
+    - "Do not skip questions - mark as LOW confidence if uncertain"
+    - "Do not proceed without user confirmation (unless --auto flag)"
+
+  preferences:
+    - "Prefer official documentation over community sources"
+    - "Prefer well-maintained libraries (commits in last 6 months)"
+    - "Prefer permissive licenses (MIT/BSD/Apache)"
+
+# =============================================================================
+# PROJECT NOTES
+# =============================================================================
+
+notes:
+  - "Add project-specific notes here"
+  - "Document any special considerations"

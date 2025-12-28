@@ -1,0 +1,101 @@
+# Research Agent Configuration - Web Application
+# Optimized for web application projects
+#
+# Schema Version: 1.0.0
+
+metadata:
+  project_name: "MyWebApp"
+  project_type: "Web Application"
+  schema_version: "1.0.0"
+
+paths:
+  research_root: "docs/research"
+  research_plan: "docs/research/research-plan.yaml"
+  research_template: ".specify/templates/research-template.yaml"
+  research_feedback_template: ".specify/templates/research-feedback-template.md"
+  decision_log: "docs/research/decision-log.yaml"
+  constitution: "docs/constitution.md"
+  feature_specs: "specs/features"
+  architecture_docs: "docs/architecture"
+  sprint_plans: "project/sprints"
+
+# Web apps prioritize security, scalability, and UX
+decision_criteria:
+  weights:
+    security: 30 # Critical for web apps
+    scalability: 25 # Handle growth
+    user_experience: 20 # User-facing app
+    maintainability: 15
+    cost: 10 # Cloud/hosting costs
+
+  scoring:
+    scale: "0-100"
+    pass_threshold: 65 # Slightly higher for web
+    recommend_threshold: 80
+
+# Web-specific performance gates
+performance_gates:
+  page_load: "<2s" # First contentful paint
+  time_to_interactive: "<3s"
+  api_response: "<200ms"
+  lighthouse_score: ">90"
+
+methodology:
+  confidence_levels:
+    - level: "CERTAIN"
+      definition: "Tested in production-like environment"
+    - level: "HIGH"
+      definition: "Multiple web sources agree, tested locally"
+    - level: "MEDIUM"
+      definition: "Common web pattern, single good source"
+    - level: "LOW"
+      definition: "Limited web-specific information"
+
+  task_types:
+    - name: "framework_evaluation"
+      description: "Evaluate frontend/backend frameworks"
+      typical_duration: "3-5 hours"
+    - name: "api_design"
+      description: "Research API design patterns"
+      typical_duration: "2-4 hours"
+    - name: "security_analysis"
+      description: "Research security approaches"
+      typical_duration: "3-4 hours"
+
+research_types:
+  - type: "framework_evaluation"
+    description: "Evaluate web frameworks"
+    deliverables:
+      - "Framework comparison"
+      - "Bundle size analysis"
+      - "Performance benchmarks"
+  - type: "hosting_research"
+    description: "Research hosting solutions"
+    deliverables:
+      - "Cost comparison"
+      - "Scaling analysis"
+      - "Deployment strategy"
+
+integration:
+  handoff_agents:
+    - agent: "speckit.plan"
+      when: "Framework or architecture decision made"
+    - agent: "speckit.implement"
+      when: "API design finalized"
+
+behavior:
+  requirements:
+    - "Always check OWASP top 10 compliance"
+    - "Always consider mobile responsiveness"
+    - "Always evaluate accessibility (WCAG 2.1)"
+
+  preferences:
+    - "Prefer frameworks with strong security track record"
+    - "Prefer solutions with good SEO support"
+    - "Prefer technologies with large community"
+
+notes:
+  - "Security is paramount for web applications"
+  - "Consider both client and server performance"
+  - "Mobile-first approach required"
+  - "Accessibility is not optional"

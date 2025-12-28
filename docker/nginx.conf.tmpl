@@ -5,7 +5,9 @@ server {
     listen 80;
     server_name localhost;
     
-    root /var/www/site;
+    # Support both /var/www/site and /var/www/site/public_html as document roots
+    # First try public_html (20i convention), fallback to site root
+    root /var/www/site/public_html;
     index index.php index.html index.htm;
 
     # Security headers (20i-style)

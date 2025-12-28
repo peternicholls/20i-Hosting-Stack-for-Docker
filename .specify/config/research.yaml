@@ -1,0 +1,125 @@
+# Research Agent Configuration - Infrastructure/DevOps
+# Optimized for infrastructure and DevOps projects
+#
+# Schema Version: 1.0.0
+
+metadata:
+  project_name: "MyInfrastructure"
+  project_type: "Infrastructure/DevOps"
+  schema_version: "1.0.0"
+
+paths:
+  research_root: "runbooks/research"
+  research_plan: "runbooks/research/research-plan.yaml"
+  research_template: ".specify/templates/research-template.yaml"
+  research_feedback_template: ".specify/templates/research-feedback-template.md"
+  decision_log: "runbooks/research/decision-log.yaml"
+  constitution: "docs/principles.md"
+  feature_specs: "specs"
+  architecture_docs: "architecture"
+  sprint_plans: "project/sprints"
+
+# Infrastructure prioritizes reliability and operational simplicity
+decision_criteria:
+  weights:
+    reliability: 30 # Uptime is critical
+    operational_complexity: 25 # Simple to operate
+    cost: 20 # Cloud costs matter
+    security: 15 # Protect infrastructure
+    vendor_lock_in: 10 # Avoid dependency
+
+  scoring:
+    scale: "0-100"
+    pass_threshold: 70 # High bar for production systems
+    recommend_threshold: 85
+
+# Infrastructure-specific gates
+performance_gates:
+  deployment_time: "<5min"
+  recovery_time: "<15min" # Mean time to recovery
+  uptime: ">99.9%"
+  cost_per_month: "<$X" # Set your budget
+
+constitution_principles:
+  - id: "RELIABILITY"
+    name: "Reliability First"
+    description: "Systems must be reliable above all else"
+    weight: "critical"
+  - id: "SIMPLICITY"
+    name: "Operational Simplicity"
+    description: "Simple to understand and operate"
+    weight: "critical"
+  - id: "OBSERVABLE"
+    name: "Observable Systems"
+    description: "Full visibility into system behavior"
+    weight: "high"
+
+methodology:
+  confidence_levels:
+    - level: "CERTAIN"
+      definition: "Production-tested, documented failure modes"
+    - level: "HIGH"
+      definition: "Common infrastructure pattern, proven at scale"
+    - level: "MEDIUM"
+      definition: "Used by others, not yet validated for our scale"
+    - level: "LOW"
+      definition: "New technology, limited production experience"
+
+  task_types:
+    - name: "platform_evaluation"
+      description: "Evaluate cloud platforms or tools"
+      typical_duration: "4-6 hours"
+    - name: "cost_analysis"
+      description: "Analyze total cost of ownership"
+      typical_duration: "2-3 hours"
+    - name: "disaster_recovery"
+      description: "Research backup and recovery strategies"
+      typical_duration: "3-4 hours"
+
+research_types:
+  - type: "platform_evaluation"
+    description: "Evaluate cloud platforms/tools"
+    deliverables:
+      - "Platform comparison"
+      - "Cost analysis"
+      - "Migration plan"
+  - type: "monitoring_research"
+    description: "Research monitoring solutions"
+    deliverables:
+      - "Observability strategy"
+      - "Alert design"
+      - "Dashboard templates"
+  - type: "automation_research"
+    description: "Research automation approaches"
+    deliverables:
+      - "IaC tool comparison"
+      - "CI/CD pipeline design"
+      - "Deployment strategy"
+
+integration:
+  handoff_agents:
+    - agent: "speckit.plan"
+      when: "Infrastructure design decided"
+    - agent: "speckit.implement"
+      when: "Ready to provision resources"
+
+behavior:
+  requirements:
+    - "Always consider disaster recovery"
+    - "Always document runbooks"
+    - "Always plan for failure"
+    - "Always consider costs at scale"
+
+  preferences:
+    - "Prefer managed services over self-hosted"
+    - "Prefer multi-region for critical systems"
+    - "Prefer infrastructure as code"
+    - "Prefer proven technologies"
+
+notes:
+  - "Reliability is non-negotiable"
+  - "Operational complexity is a hidden cost"
+  - "Monitor everything, alert on what matters"
+  - "Plan for things to fail"
+  - "Cost scales with usage - model it early"
+  - "Avoid vendor lock-in where possible"

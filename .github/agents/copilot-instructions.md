@@ -3,6 +3,8 @@
 Auto-generated from feature plans. Last updated: 2025-12-28
 
 ## Active Technologies
+- Go 1.21+ + Bubble Tea v1.3.10+, Bubbles v1.0.0+, Lipgloss v1.0.0+, Docker SDK v27.0.0+ (001-stack-manager-tui)
+- N/A (reads docker-compose.yml and .20i-local; no persistent state) (001-stack-manager-tui)
 
 - **GitHub Actions** (004-release-workflow) - CI/CD automation
 - **release-please** (004-release-workflow) - Automated versioning and changelog
@@ -64,6 +66,7 @@ scripts/release/validate.sh --all      # Run all validations
 - **YAML**: 2-space indentation, quoted strings for versions
 
 ## Recent Changes
+- 001-stack-manager-tui: Added Go 1.21+ + Bubble Tea v1.3.10+, Bubbles v1.0.0+, Lipgloss v1.0.0+, Docker SDK v27.0.0+
 
 - 004-release-workflow: Added automated release versioning with release-please
   - GitHub Actions workflows for CI/CD

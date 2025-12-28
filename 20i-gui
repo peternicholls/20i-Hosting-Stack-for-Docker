@@ -9,8 +9,10 @@ if [[ -n "${STACK_FILE:-}" ]]; then
     # STACK_FILE is explicitly set
     STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
 else
-    # Default: use STACK_HOME or fall back
-    STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+    # Determine where this script is located (project root)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+    # Default: use script location as STACK_HOME, or explicit STACK_HOME if provided
+    STACK_HOME="${STACK_HOME:-$SCRIPT_DIR}"
     STACK_FILE="$STACK_HOME/docker-compose.yml"
 fi
 
