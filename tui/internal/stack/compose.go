@@ -17,6 +17,13 @@ import (
 	"github.com/peternicholls/20i-stack/tui/internal/project"
 )
 
+const (
+	// outputChannelBufferSize is the buffer size for the output channel.
+	// A buffered channel prevents blocking if the UI is temporarily slow to consume messages.
+	// Size of 100 accommodates typical docker compose output without excessive memory usage.
+	outputChannelBufferSize = 100
+)
+
 // ComposeResult holds the result of a compose operation.
 type ComposeResult struct {
 	Success bool
@@ -304,7 +311,7 @@ func ComposeUpStreaming(stackFile, codeDir string) (<-chan OutputLine, error) {
 	}
 
 	// Create a buffered channel to prevent blocking
-	output := make(chan OutputLine, 100)
+	output := make(chan OutputLine, outputChannelBufferSize)
 
 	// Stream output in a goroutine
 	go func() {

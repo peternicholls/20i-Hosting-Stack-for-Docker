@@ -68,6 +68,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		
+		// Update viewport dimensions based on panel layout
+		serviceListWidth := max(20, m.width*30/100)
+		statusPanelWidth := m.width - serviceListWidth
+		panelHeight := m.height - 4
+		
+		m.outputViewport.Width = statusPanelWidth - 4
+		m.outputViewport.Height = panelHeight - 4
+		
 		return m, nil
 
 	case tea.KeyMsg:
@@ -238,11 +247,7 @@ func (m Model) renderFooter() string {
 
 // renderOutputPanel renders the output streaming viewport.
 func (m Model) renderOutputPanel(width, height int) string {
-	// Update viewport dimensions
-	m.outputViewport.Width = width - 4
-	m.outputViewport.Height = height - 4
-	
-	// Render viewport content
+	// Render viewport content (dimensions already set in Update)
 	viewportContent := m.outputViewport.View()
 	
 	// Wrap in border
@@ -394,6 +399,9 @@ func ComposeOutputCmd(stackFile, codeDir string) tea.Cmd {
 }
 
 // subscribeToOutputCmd returns a command that reads from the output channel.
+// This uses the tea.Batch pattern to read one line at a time without blocking.
+// Each invocation reads one line and schedules the next read, allowing the
+// Bubble Tea runtime to handle other events between reads.
 func subscribeToOutputCmd(outputCh <-chan stack.OutputLine) tea.Cmd {
 	return func() tea.Msg {
 		// Read next line from channel
@@ -403,7 +411,8 @@ func subscribeToOutputCmd(outputCh <-chan stack.OutputLine) tea.Cmd {
 			return composeOutputCompleteMsg{}
 		}
 
-		// Convert to StackOutputMsg and continue reading
+		// Convert to StackOutputMsg and schedule next read
+		// Using tea.Batch allows UI to remain responsive between lines
 		return tea.Batch(
 			func() tea.Msg {
 				return StackOutputMsg{
