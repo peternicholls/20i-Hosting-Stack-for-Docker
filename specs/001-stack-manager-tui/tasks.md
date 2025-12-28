@@ -15,7 +15,18 @@
 - `/runbooks/research/INDEX.md` - Find which detailed guide you need
 - `/runbooks/research/bubbletea-component-guide.md` - Component architecture patterns
 - `/runbooks/research/lipgloss-styling-reference.md` - Styling patterns and color palette
+- The TUI directory is `tui/` at the repository root
 
+**Documentation Expectations**: While implementing tasks, add Go doc comments for any exported types, functions, and packages you touch, and add brief inline comments only where logic is non-obvious.
+
+**Go File Header Template**: Use this standard header at the top of each Go source file (update fields as needed).
+```go
+// Project: 20i Stack Manager TUI
+// File: <filename.go>
+// Purpose: <short purpose>
+// Version: <semver or revision>
+// Updated: <YYYY-MM-DD>
+```
 ---
 
 ## Format: `- [ ] [ID] [P?] [Story?] Description`
@@ -32,20 +43,20 @@
 
 **Purpose**: Initialize Go project structure and dependencies
 
-- [ ] T001 Create tui/ directory at repository root
-- [ ] T002 Initialize Go module with `go mod init github.com/peternicholls/20i-stack/tui`
-- [ ] T003 [P] Add Bubble Tea dependency v1.3.10+ in go.mod
-- [ ] T004 [P] Add Bubbles dependency v1.0.0+ in go.mod
-- [ ] T005 [P] Add Lipgloss dependency v1.0.0+ in go.mod
-- [ ] T006 [P] Add Docker SDK dependency v27.0.0+ in go.mod
-- [ ] T007 Run `go mod tidy` to generate go.sum
-- [ ] T008 Create directory structure: internal/app, internal/views/dashboard, internal/views/help, internal/views/projects, internal/docker, internal/ui
-- [ ] T009 [P] Create placeholder tui/main.go with basic Bubble Tea hello world
+- [X] T001 Create tui/ directory at repository root
+- [X] T002 Initialize Go module with `go mod init github.com/peternicholls/20i-stack/tui`
+- [X] T003 [P] Add Bubble Tea dependency v1.3.10+ in go.mod
+- [X] T004 [P] Add Bubbles dependency v1.0.0+ in go.mod
+- [X] T005 [P] Add Lipgloss dependency v1.0.0+ in go.mod
+- [X] T006 [P] Add Docker SDK dependency v27.0.0+ in go.mod
+- [X] T007 Run `go mod tidy` to generate go.sum
+- [X] T008 Create directory structure: internal/app, internal/views/dashboard, internal/views/help, internal/views/projects, internal/docker, internal/ui
+- [X] T009 [P] Create placeholder tui/main.go with basic Bubble Tea hello world
   > **📖 Reference**: See `/runbooks/research/QUICK-REFERENCE.md` - "Bubble Tea Basics" section for Init/Update/View pattern
-- [ ] T010 [P] Create Makefile with build, install, clean, test, test-coverage targets
-- [ ] T011 Create tests/ directory structure: tests/unit/, tests/integration/, tests/mocks/
-- [ ] T012 Verify `go run main.go` works (shows hello world, press 'q' to quit)
-- [ ] T013 [P] Create tests/mocks/docker_mock.go with MockDockerClient interface matching docker-api.md contract
+- [X] T010 [P] Create Makefile with build, install, clean, test, test-coverage targets
+- [X] T011 Create tests/ directory structure: tests/unit/, tests/integration/, tests/mocks/
+- [X] T012 Verify `go run main.go` works (shows hello world, press 'q' to quit)
+- [X] T013 [P] Create tests/mocks/docker_mock.go with MockDockerClient interface matching docker-api.md contract
 
 **Checkpoint**: Go project initializes, dependencies resolve, basic TUI runs, test infrastructure ready
 
@@ -57,14 +68,16 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T012 [P] Create internal/ui/styles.go with Lipgloss color palette (ColorRunning, ColorStopped, ColorError, ColorAccent, ColorBorder)
+- [X] T012 [P] Create internal/ui/styles.go with Lipgloss color palette (ColorRunning, ColorStopped, ColorError, ColorAccent, ColorBorder)
   > **🎨 CRITICAL**: Use EXACT color palette from `/runbooks/research/lipgloss-styling-reference.md` - "Standard Color Palette" section
   > ColorRunning = lipgloss.Color("10"), ColorStopped = lipgloss.Color("8"), ColorError = lipgloss.Color("9"), etc.
   > **⚠️ NEVER use raw ANSI codes** - Always use Lipgloss. See "Common Gotchas" in styling reference.
-- [ ] T013 [P] Create internal/ui/components.go with StatusIcon function (maps ContainerStatus enum to emoji icons)
+- [X] T013 [P] Create internal/ui/components.go with StatusIcon function (maps ContainerStatus enum to emoji icons)
+  - **Implemented**: `StatusIcon(status string) string` in `internal/ui/components.go` — maps status strings to glyphs (●, ○, ✗, ⚠) and applies color styles from `internal/ui/styles.go`. Unit tests added in `internal/ui/components_test.go`.
   > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "Unicode Icons Reference" section
   > Use "●" for running, "○" for stopped, "✗" for error, "⚠" for warning
-- [ ] T014 [P] Create internal/ui/layout.go with panel sizing functions (calculatePanelWidths, calculatePanelHeights)
+- [X] T014 [P] Create internal/ui/layout.go with panel sizing functions (calculatePanelWidths, calculatePanelHeights)
+  > Use "●" for running, "○" for stopped, "✗" for error, "⚠" for warning
   > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "Layout Patterns" section
   > Use lipgloss.Width() and Height() to measure before placing. See "3-Panel Layout" example.
 - [ ] T015 Create internal/docker/client.go with Client struct and NewClient() method per docker-api.md contract
@@ -350,25 +363,26 @@
 - [ ] T161 Implement graceful degradation: fallback UI if Docker daemon unreachable
 - [ ] T162 [TEST] Add accessibility tests: verify keyboard-only navigation, screen reader compatibility hints
 - [ ] T163 Add startup banner with version number and Docker status
-- [ ] T164 Implement config file support: ~/.20i-stack-manager.yml for default project path
-- [ ] T165 Add '--project' CLI flag to override default project
-- [ ] T166 Add '--version' and '--help' CLI flags
-- [ ] T167 [TEST] Create tests/e2e/ directory with end-to-end test suite using Bubble Tea test utilities
-- [ ] T168 [TEST] Create e2e test: Launch app, navigate dashboard, perform lifecycle action, verify result
-- [ ] T169 [TEST] Create e2e test: Open logs, verify streaming, apply filter, verify results
-- [ ] T170 [TEST] Create e2e test: Switch projects, verify containers reload
-- [ ] T171 [TEST] Create regression test suite: Run all unit + integration + e2e tests in sequence
-- [ ] T172 [TEST] Performance regression: Benchmark startup time <2s, memory usage <30MB, stats refresh <200ms
-- [ ] T173 [TEST] Cross-platform test: Run test suite on macOS and Linux (GitHub Actions)
-- [ ] T174 Update README.md with screenshots, installation instructions, keyboard shortcuts reference
-- [ ] T175 Create TESTING.md with guide for running unit/integration/e2e tests, adding new tests
-- [ ] T176 Add inline code comments for complex Bubble Tea message flows
-- [ ] T177 Generate API documentation: `go doc` for all exported types
-- [ ] T178 Create ARCHITECTURE.md diagram showing Model-Update-View flow
-- [ ] T179 [TEST] Documentation test: Verify all CLI flags documented, all shortcuts in help modal
-- [ ] T180 [TEST] Final acceptance test: Run all 5 user story acceptance scenarios end-to-end
-- [ ] T181 [TEST] Test coverage report: Generate HTML coverage report, verify >85% total coverage
-- [ ] T182 [TEST] Run `make test-all` (unit + integration + e2e + regression), all tests must pass
+- [ ] T164 Implement config file support: ~/.20istackman/settings.json for default project path
+- [ ] T165 Add theme toggle: cycle built-in palettes, persist selection in ~/.20istackman/settings.json
+- [ ] T166 Add '--project' CLI flag to override default project
+- [ ] T167 Add '--version' and '--help' CLI flags
+- [ ] T168 [TEST] Create tests/e2e/ directory with end-to-end test suite using Bubble Tea test utilities
+- [ ] T169 [TEST] Create e2e test: Launch app, navigate dashboard, perform lifecycle action, verify result
+- [ ] T170 [TEST] Create e2e test: Open logs, verify streaming, apply filter, verify results
+- [ ] T171 [TEST] Create e2e test: Switch projects, verify containers reload
+- [ ] T172 [TEST] Create regression test suite: Run all unit + integration + e2e tests in sequence
+- [ ] T173 [TEST] Performance regression: Benchmark startup time <2s, memory usage <30MB, stats refresh <200ms
+- [ ] T174 [TEST] Cross-platform test: Run test suite on macOS and Linux (GitHub Actions)
+- [ ] T175 Update README.md with screenshots, installation instructions, keyboard shortcuts reference
+- [ ] T176 Create TESTING.md with guide for running unit/integration/e2e tests, adding new tests
+- [ ] T177 Add inline code comments for complex Bubble Tea message flows
+- [ ] T178 Generate API documentation: `go doc` for all exported types
+- [ ] T179 Create ARCHITECTURE.md diagram showing Model-Update-View flow
+- [ ] T180 [TEST] Documentation test: Verify all CLI flags documented, all shortcuts in help modal
+- [ ] T181 [TEST] Final acceptance test: Run all 5 user story acceptance scenarios end-to-end
+- [ ] T182 [TEST] Test coverage report: Generate HTML coverage report, verify >85% total coverage
+- [ ] T183 [TEST] Run `make test-all` (unit + integration + e2e + regression), all tests must pass
 
 **Checkpoint**: Production-ready - all features polished, comprehensive test suite passing, documentation complete, >85% coverage
 

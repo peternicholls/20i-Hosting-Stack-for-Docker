@@ -504,6 +504,7 @@ var (
 - **NFR-006**: Dashboard stats MUST refresh every 2s (configurable 1-5s range)
 - **NFR-007**: Log buffer MUST NOT exceed 40MB total (4 containers × 10k lines × 1KB avg)
 - **NFR-008**: Background goroutines MUST NOT block main UI thread (all I/O async)
+- **NFR-009**: User settings and TUI artifacts MUST live under `~/.20istackman` (create on first run)
 
 ### Keyboard Shortcuts
 
