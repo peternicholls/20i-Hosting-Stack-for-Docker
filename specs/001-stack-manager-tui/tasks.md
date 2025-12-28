@@ -4,9 +4,17 @@
 **Input**: Design documents from `/specs/001-stack-manager-tui/`  
 **Prerequisites**: plan.md, spec.md (5 user stories), research.md, data-model.md, contracts/ (docker-api.md, ui-events.md)
 
-**Tests**: NOT REQUESTED - Tests omitted from task list (no TDD requirement in spec)
+**Tests**: INCLUDED - Unit tests, integration tests, and UI tests integrated throughout implementation phases using Go testing package, table-driven tests, mock Docker client, and Bubble Tea test utilities.
+
+**Testing Strategy**: TDD-lite approach - write tests alongside implementation (not strictly before), validate each component independently, regression test suite for CI/CD.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+
+**📚 Agent Guidance**: Before starting, review:
+- `/runbooks/research/QUICK-REFERENCE.md` - Keep this open while coding (cheat sheet)
+- `/runbooks/research/INDEX.md` - Find which detailed guide you need
+- `/runbooks/research/bubbletea-component-guide.md` - Component architecture patterns
+- `/runbooks/research/lipgloss-styling-reference.md` - Styling patterns and color palette
 
 ---
 
@@ -33,10 +41,13 @@
 - [ ] T007 Run `go mod tidy` to generate go.sum
 - [ ] T008 Create directory structure: internal/app, internal/views/dashboard, internal/views/help, internal/views/projects, internal/docker, internal/ui
 - [ ] T009 [P] Create placeholder tui/main.go with basic Bubble Tea hello world
-- [ ] T010 [P] Create Makefile with build, install, clean targets
-- [ ] T011 Verify `go run main.go` works (shows hello world, press 'q' to quit)
+  > **📖 Reference**: See `/runbooks/research/QUICK-REFERENCE.md` - "Bubble Tea Basics" section for Init/Update/View pattern
+- [ ] T010 [P] Create Makefile with build, install, clean, test, test-coverage targets
+- [ ] T011 Create tests/ directory structure: tests/unit/, tests/integration/, tests/mocks/
+- [ ] T012 Verify `go run main.go` works (shows hello world, press 'q' to quit)
+- [ ] T013 [P] Create tests/mocks/docker_mock.go with MockDockerClient interface matching docker-api.md contract
 
-**Checkpoint**: Go project initializes, dependencies resolve, basic TUI runs
+**Checkpoint**: Go project initializes, dependencies resolve, basic TUI runs, test infrastructure ready
 
 ---
 
@@ -47,18 +58,34 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
 - [ ] T012 [P] Create internal/ui/styles.go with Lipgloss color palette (ColorRunning, ColorStopped, ColorError, ColorAccent, ColorBorder)
+  > **🎨 CRITICAL**: Use EXACT color palette from `/runbooks/research/lipgloss-styling-reference.md` - "Standard Color Palette" section
+  > ColorRunning = lipgloss.Color("10"), ColorStopped = lipgloss.Color("8"), ColorError = lipgloss.Color("9"), etc.
+  > **⚠️ NEVER use raw ANSI codes** - Always use Lipgloss. See "Common Gotchas" in styling reference.
 - [ ] T013 [P] Create internal/ui/components.go with StatusIcon function (maps ContainerStatus enum to emoji icons)
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "Unicode Icons Reference" section
+  > Use "●" for running, "○" for stopped, "✗" for error, "⚠" for warning
 - [ ] T014 [P] Create internal/ui/layout.go with panel sizing functions (calculatePanelWidths, calculatePanelHeights)
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "Layout Patterns" section
+  > Use lipgloss.Width() and Height() to measure before placing. See "3-Panel Layout" example.
 - [ ] T015 Create internal/docker/client.go with Client struct and NewClient() method per docker-api.md contract
 - [ ] T016 Implement Docker connection check in client.go (Ping method, error handling for daemon unreachable)
 - [ ] T017 [P] Create internal/app/messages.go with custom tea.Msg types: statsMsg, containerListMsg, logLineMsg, containerActionMsg, containerActionResultMsg per ui-events.md
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md` - "Component Pattern" section for message type examples
+  > Messages drive ALL state changes. Never mutate model directly.
 - [ ] T018 Create internal/app/root.go with RootModel struct (activeView, dashboard, help, projects, dockerClient fields)
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md` - "Root Model Pattern" section
+  > Root model is a COORDINATOR - delegates messages to child components. See full example in guide.
 - [ ] T019 Implement RootModel.Init() method (initialize Docker client, return initial commands)
 - [ ] T020 Implement RootModel.Update() method with global shortcut routing (q=quit, ?=help, p=projects)
+  > **📖 Reference**: See `/runbooks/research/QUICK-REFERENCE.md` - "Common Update Pattern" section for switch statement template
+  > Handle tea.KeyMsg for shortcuts, tea.WindowSizeMsg for responsive layout. NEVER block in Update()!
 - [ ] T021 Implement RootModel.View() method with modal overlay logic
 - [ ] T022 Update tui/main.go to create and run RootModel instead of hello world
+- [ ] T023 [P] [TEST] Create internal/docker/client_test.go with table-driven tests for Docker connection (success, daemon unreachable, permission denied)
+- [ ] T024 [P] [TEST] Create internal/app/root_test.go with unit tests for RootModel Init/Update/View (test global shortcuts, view routing)
+- [ ] T025 [TEST] Run `make test` to verify foundational tests pass
 
-**Checkpoint**: Foundation ready - Docker client connects, root model routes messages, can extend with views
+**Checkpoint**: Foundation ready - Docker client connects, root model routes messages, test coverage >80%
 
 ---
 
@@ -72,41 +99,72 @@
 
 ### Implementation for User Story 2 - LIFECYCLE FIRST
 
-- [ ] T023 [P] [US2] Create Container entity struct in internal/docker/client.go (ID, Name, Service, Image, Status, State fields - minimal for lifecycle)
-- [ ] T024 [P] [US2] Create ContainerStatus enum in internal/docker/client.go (Running, Stopped, Restarting, Error)
-- [ ] T025 [US2] Implement mapDockerState() helper function in internal/docker/client.go to map Docker states to ContainerStatus enum
-- [ ] T026 [US2] Implement ListContainers(projectName string) method in internal/docker/client.go per docker-api.md contract
-- [ ] T027 [P] [US2] Implement StartContainer(containerID string) method in internal/docker/client.go per docker-api.md contract
-- [ ] T028 [P] [US2] Implement StopContainer(containerID string, timeout int) method in internal/docker/client.go
-- [ ] T029 [P] [US2] Implement RestartContainer(containerID string, timeout int) method in internal/docker/client.go
-- [ ] T030 [P] [US2] Implement ComposeStop(projectPath string) method in internal/docker/client.go per docker-api.md
-- [ ] T031 [P] [US2] Implement ComposeRestart(projectPath string) method in internal/docker/client.go
-- [ ] T032 [P] [US2] Implement ComposeDown(projectPath string, removeVolumes bool) method in internal/docker/client.go
-- [ ] T033 [US2] Add ContainerAction enum to internal/app/messages.go (Start, Stop, Restart)
-- [ ] T034 [US2] Add ComposeAction enum to internal/app/messages.go (StopAll, RestartAll, Destroy)
-- [ ] T035 [US2] Add composeActionMsg and composeActionResultMsg types to internal/app/messages.go
-- [ ] T036 [P] [US2] Create internal/views/dashboard/dashboard.go with DashboardModel struct (serviceList, containers, selectedIndex fields - NO stats yet)
-- [ ] T037 [US2] Implement DashboardModel.Init() method to load container list
-- [ ] T038 [US2] Implement containerListMsg handling in DashboardModel.Update()
-- [ ] T039 [US2] Create internal/views/dashboard/service_list.go with simple list rendering (status icon + name only)
-- [ ] T040 [US2] Implement DashboardModel.View() with simple 2-panel layout (service list 30% | status messages 70% | footer)
-- [ ] T041 [US2] Wire DashboardModel into RootModel in internal/app/root.go
-- [ ] T042 [US2] Implement navigation keys (↑/k=up, ↓/j=down) in DashboardModel.Update()
-- [ ] T043 [US2] Implement 's' key handler to toggle start/stop for selected container
-- [ ] T044 [US2] Implement 'r' key handler to restart selected container
-- [ ] T045 [US2] Implement 'S' key handler to stop all stack containers (with simple confirmation)
-- [ ] T046 [US2] Implement 'R' key handler to restart entire stack
-- [ ] T047 [US2] Create startContainerCmd() function in dashboard.go to launch async Docker operation
-- [ ] T048 [US2] Create stopContainerCmd() function in dashboard.go
-- [ ] T049 [US2] Create restartContainerCmd() function in dashboard.go
-- [ ] T050 [US2] Implement containerActionResultMsg handler with success/error feedback
-- [ ] T051 [US2] Add status message panel to show "✅ Container started" or "❌ Failed: error"
-- [ ] T052 [US2] Trigger containerListMsg refresh after successful action
-- [ ] T053 [US2] Implement error message formatting per docker-api.md (user-friendly port conflicts, timeouts)
-- [ ] T054 [US2] Add footer with basic shortcuts: "s:start/stop  r:restart  S:stop-all  R:restart-all  D:destroy  q:quit"
-- [ ] T055 [US2] Test lifecycle: start stopped container, verify status changes; stop running container, verify status changes
+- [ ] T026 [P] [US2] Create Container entity struct in internal/docker/client.go (ID, Name, Service, Image, Status, State fields - minimal for lifecycle; will be extended later with Ports, CreatedAt, StartedAt)
+- [ ] T027 [P] [US2] Create ContainerStatus enum in internal/docker/client.go (Running, Stopped, Restarting, Error)
+- [ ] T028 [P] [TEST] Create internal/docker/client_test.go unit tests for mapDockerState() with table-driven tests (all Docker states → ContainerStatus)
+- [ ] T029 [US2] Implement mapDockerState() helper function in internal/docker/client.go to map Docker states to ContainerStatus enum
+- [ ] T030 [US2] Implement ListContainers(projectName string) method in internal/docker/client.go per docker-api.md contract
+- [ ] T031 [P] [TEST] Add unit tests to client_test.go for ListContainers (with mock client, test project filtering, empty results, errors)
+- [ ] T032 [P] [US2] Implement StartContainer(containerID string) method in internal/docker/client.go per docker-api.md contract
+- [ ] T033 [P] [US2] Implement StopContainer(containerID string, timeout int) method in internal/docker/client.go
+- [ ] T034 [P] [US2] Implement RestartContainer(containerID string, timeout int) method in internal/docker/client.go
+- [ ] T035 [P] [TEST] Add unit tests for Start/Stop/Restart methods (mock client, test success, container not found, timeout errors)
+- [ ] T036 [P] [US2] Implement ComposeStop(projectPath string) method in internal/docker/client.go per docker-api.md
+- [ ] T037 [P] [US2] Implement ComposeRestart(projectPath string) method in internal/docker/client.go
+- [ ] T038 [P] [US2] Implement ComposeDown(projectPath string, removeVolumes bool) method in internal/docker/client.go
+- [ ] T039 [P] [TEST] Add unit tests for Compose operations (mock exec, test success, invalid path, permission errors)
+- [ ] T040 [US2] Add ContainerAction enum to internal/app/messages.go (Start, Stop, Restart)
+- [ ] T041 [US2] Add ComposeAction enum to internal/app/messages.go (StopAll, RestartAll, Destroy)
+- [ ] T042 [US2] Add composeActionMsg and composeActionResultMsg types to internal/app/messages.go
+- [ ] T043 [P] [TEST] Create internal/app/messages_test.go with tests for message type creation and field validation
+- [ ] T044 [P] [US2] Create internal/views/dashboard/dashboard.go with DashboardModel struct (serviceList, containers, selectedIndex fields - NO stats yet)
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md` - "Component Structure" section
+  > Every component must implement tea.Model interface (Init/Update/View). See full pattern example.
+- [ ] T045 [US2] Implement DashboardModel.Init() method to load container list
+- [ ] T046 [US2] Implement containerListMsg handling in DashboardModel.Update()
+- [ ] T047 [US2] Create internal/views/dashboard/service_list.go with simple list rendering (status icon + name only)
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "List Row Styles" section
+  > AND `/runbooks/research/QUICK-REFERENCE.md` - "Service List" pattern (copy-paste example)
+  > Use StatusIcon from T013 + RowStyle/SelectedRowStyle. DEFINE STYLES ONCE at package level, not in View()!
+- [ ] T048 [P] [TEST] Create internal/views/dashboard/dashboard_test.go with Bubble Tea test program (test Init returns correct cmd, Update handles messages, View renders)
+- [ ] T049 [US2] Implement DashboardModel.View() with simple 2-panel layout (service list 30% | status messages 70% | footer)
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "3-Panel Layout (Dashboard)" section
+  > Use lipgloss.JoinHorizontal() for side-by-side, JoinVertical() for stacking. Measure panels first with lipgloss.Width().
+  > **⚠️ Anti-Pattern**: Don't hardcode widths! Use m.width from tea.WindowSizeMsg to calculate panel sizes.
+- [ ] T050 [US2] Wire DashboardModel into RootModel in internal/app/root.go
+- [ ] T051 [US2] Implement navigation keys (↑/k=up, ↓/j=down) in DashboardModel.Update()
+  > **📖 Reference**: See `/runbooks/research/QUICK-REFERENCE.md` - "Common Update Pattern" for key handling switch statement
+  > Handle both arrow keys ("up"/"down") AND vim bindings ("k"/"j") for better UX
+- [ ] T052 [P] [TEST] Add tests to dashboard_test.go for navigation (test up/down key messages update selectedIndex correctly)
+- [ ] T053 [US2] Implement 's' key handler to toggle start/stop for selected container
+- [ ] T054 [US2] Implement 'r' key handler to restart selected container
+- [ ] T055 [US2] Implement 'S' key handler to stop all stack containers (with simple confirmation)
+- [ ] T056 [US2] Implement 'R' key handler to restart entire stack
+- [ ] T057 [P] [TEST] Add tests for key handlers (test 's' sends correct containerActionMsg, 'S' sends composeActionMsg)
+- [ ] T058 [US2] Create startContainerCmd() function in dashboard.go to launch async Docker operation
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Component Pattern" section, fetchServicesCmd() example
+  > Commands return tea.Msg when complete. Use goroutine inside tea.Cmd to avoid blocking UI.
+  > **⚠️ Anti-Pattern**: NEVER call Docker API directly in Update() - this blocks the UI! Always use tea.Cmd.
+- [ ] T059 [US2] Create stopContainerCmd() function in dashboard.go
+- [ ] T060 [US2] Create restartContainerCmd() function in dashboard.go
+- [ ] T061 [US2] Implement containerActionResultMsg handler with success/error feedback
+- [ ] T062 [P] [TEST] Add tests for command functions (use mock client, verify commands send correct result messages)
+- [ ] T063 [US2] Add status message panel to show "✅ Container started" or "❌ Failed: error"
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md" - "Error/Warning Message Styles" section
+  > Use ErrorStyle/WarningStyle/InfoStyle with Unicode icons (✓, ✗, ⚠, ℹ) from "Unicode Icons Reference"
+- [ ] T064 [US2] Trigger containerListMsg refresh after successful action
+- [ ] T065 [US2] Implement error message formatting per docker-api.md (user-friendly port conflicts, timeouts)
+- [ ] T066 [P] [TEST] Add tests for error message formatting (test port conflict → user-friendly message, timeout → actionable message)
+- [ ] T067 [US2] Add footer with basic shortcuts: "s:start/stop  r:restart  S:stop-all  R:restart-all  D:destroy  q:quit"
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md" - "Footer/Help Style" section
+  > Use FooterStyle with ColorMuted foreground. Keep footer visible at bottom of every view.
+- [ ] T068 [US2] Implement Enter key handler to show detail panel for selected container (basic info: image, status, uptime)
+- [ ] T069 [US2] Implement Tab key to cycle focus between service list and status message panel
+- [ ] T070 [P] [TEST] Create tests/integration/lifecycle_test.go - integration test with mock Docker client simulating full lifecycle workflow
+- [ ] T071 [TEST] Manual test per US2 acceptance scenarios 1-5 in spec.md: start stopped container, verify status changes; stop running container, verify status changes
+- [ ] T072 [TEST] Run `make test` to verify all Phase 3 tests pass (unit + integration), achieve >85% coverage
 
-**Checkpoint**: Core 20i-gui functionality working - can start/stop/restart containers and verify status
+**Checkpoint**: Core 20i-gui functionality working - can start/stop/restart containers, verify status, >85% test coverage
 
 ---
 
@@ -118,20 +176,30 @@
 
 ### Implementation for User Story 4
 
-- [ ] T056 [P] [US4] Create ConfirmationModal component in internal/ui/components.go with text input and warning styling
-- [ ] T057 [US4] Add confirmationModal field to DashboardModel in dashboard.go
-- [ ] T058 [US4] Implement 'D' key handler in DashboardModel.Update() to show destroy confirmation modal
-- [ ] T059 [US4] Render confirmation modal overlay with warning "⚠️ This will REMOVE ALL VOLUMES and data. Type 'yes' to confirm:"
-- [ ] T060 [US4] Add text input to confirmation modal using Bubbles textinput.Model component
-- [ ] T061 [US4] Implement confirmation modal input handling (type "yes", press Enter to confirm)
-- [ ] T062 [US4] Implement Esc handler in confirmation modal to cancel without destroying
-- [ ] T063 [US4] Create composeDownCmd() function in dashboard.go to call ComposeDown with removeVolumes=true
-- [ ] T064 [US4] Implement composeActionResultMsg handler for Destroy action
-- [ ] T065 [US4] Show success message "✅ Stack destroyed" after ComposeDown completes
-- [ ] T066 [US4] Refresh container list after destroy (should show empty or no running containers)
-- [ ] T067 [US4] Update footer to show "D:destroy" shortcut
+- [ ] T073 [P] [US4] Create ConfirmationModal component in internal/ui/components.go with text input and warning styling
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md" - "Centered Modal Dialog" section for layout
+  > AND `/runbooks/research/bubbletea-component-guide.md" - "Text Input Component" for Bubbles textinput.Model
+  > Use lipgloss.Place() to center modal, ErrorStyle/WarningStyle for borders/background
+- [ ] T074 [P] [TEST] Create internal/ui/components_test.go with tests for ConfirmationModal (test input validation, yes/no/esc handling)
+- [ ] T075 [US4] Add confirmationModal field to DashboardModel in dashboard.go
+- [ ] T076 [US4] Implement 'D' key handler in DashboardModel.Update() to show destroy confirmation modal
+- [ ] T077 [US4] Render confirmation modal overlay with warning "⚠️ This will REMOVE ALL VOLUMES and data. Type 'yes' to confirm:"
+- [ ] T078 [US4] Add text input to confirmation modal using Bubbles textinput.Model component
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Text Input Component" section
+  > Create with textinput.New(), set Placeholder, Focus(). Update in modal's Update method.
+- [ ] T079 [US4] Implement confirmation modal input handling (type "yes", press Enter to confirm)
+- [ ] T080 [US4] Implement Esc handler in confirmation modal to cancel without destroying
+- [ ] T081 [P] [TEST] Add tests to dashboard_test.go for destroy confirmation flow (test 'D' key, typing "yes", Esc cancel)
+- [ ] T082 [US4] Create composeDownCmd() function in dashboard.go to call ComposeDown with removeVolumes=true
+- [ ] T083 [US4] Implement composeActionResultMsg handler for Destroy action
+- [ ] T084 [US4] Show success message "✅ Stack destroyed" after ComposeDown completes
+- [ ] T085 [US4] Refresh container list after destroy (should show empty or no running containers)
+- [ ] T086 [US4] Update footer to show "D:destroy" shortcut
+- [ ] T087 [P] [TEST] Create tests/integration/destroy_test.go - integration test for full destroy workflow with mock client
+- [ ] T088 [TEST] Manual test per US4 acceptance: Press 'D', type "yes", verify stack destroyed and volumes removed
+- [ ] T089 [TEST] Run regression test suite (all previous tests + US4 tests) to ensure baseline functionality intact
 
-**Checkpoint**: ✅ BASELINE COMPLETE - All 20i-gui core functions replicated (start/stop/restart/destroy)
+**Checkpoint**: ✅ BASELINE COMPLETE - All 20i-gui core functions replicated, >85% test coverage, regression suite passing
 
 ---
 
@@ -141,26 +209,37 @@
 
 **Independent Test**: After lifecycle working, verify CPU% and memory bars update every 2s, detail panel shows ports/image/uptime
 
+**Note**: NFRs (NFR-001 to NFR-008) for performance, stats refresh rates, and memory limits apply to this enhanced phase, not the baseline MVP.
+
 ### Implementation for User Story 1 - Dashboard Enhancement
 
-- [ ] T068 [P] [US1] Create Stats entity struct in internal/docker/client.go (CPUPercent, MemoryUsed, MemoryLimit, MemoryPercent, NetworkRxBytes, NetworkTxBytes, Timestamp)
-- [ ] T069 [P] [US1] Create PortMapping entity struct in internal/docker/client.go (ContainerPort, HostPort, Protocol)
-- [ ] T070 [US1] Add Ports, CreatedAt, StartedAt fields to Container entity (expand from minimal US2 version)
-- [ ] T071 [US1] Implement WatchStats() method in internal/docker/stats.go per docker-api.md
-- [ ] T072 [US1] Implement calculateCPUPercent() and calculateMemoryPercent() helper functions in internal/docker/stats.go
-- [ ] T073 [US1] Add stats field to DashboardModel (map[string]Stats)
-- [ ] T074 [US1] Implement tickMsg handler in DashboardModel.Update() to trigger stats refresh every 2s
-- [ ] T075 [US1] Implement statsMsg handler to update stats map
-- [ ] T076 [US1] Update service_list.go to display CPU/memory bars from stats map
-- [ ] T077 [US1] Add ProgressBar component to internal/ui/components.go for CPU/memory visualization
-- [ ] T078 [P] [US1] Create internal/views/dashboard/detail.go with DetailPanel struct
-- [ ] T079 [US1] Implement detail panel rendering (image, ports, uptime, container ID, volumes)
-- [ ] T080 [US1] Expand DashboardModel.View() from 2-panel to 3-panel layout (service list 25% | detail 50% | status 25% | footer)
-- [ ] T081 [US1] Implement Enter key handler to show detail panel for selected container
-- [ ] T082 [US1] Implement Tab key to cycle focus between panels
-- [ ] T083 [US1] Update footer to show "Enter:detail  Tab:panels" shortcuts
+- [ ] T090 [P] [US1] Create Stats entity struct in internal/docker/client.go (CPUPercent, MemoryUsed, MemoryLimit, MemoryPercent, NetworkRxBytes, NetworkTxBytes, Timestamp)
+- [ ] T091 [P] [US1] Create PortMapping entity struct in internal/docker/client.go (ContainerPort, HostPort, Protocol)
+- [ ] T092 [P] [TEST] Add unit tests for Stats and PortMapping struct validation
+- [ ] T093 [US1] Extend Container entity with Ports, CreatedAt, StartedAt fields (builds on minimal schema from earlier)
+- [ ] T094 [US1] Implement WatchStats() method in internal/docker/stats.go per docker-api.md
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - search for "Command factory" pattern
+  > Return channel-based tea.Cmd that sends statsMsg periodically. Use goroutine, don't block Update().
+- [ ] T095 [P] [TEST] Create internal/docker/stats_test.go with tests for WatchStats (mock Docker stats stream, test channel output)
+- [ ] T096 [US1] Add statsMsg type to internal/app/messages.go per ui-events.md
+- [ ] T097 [US1] Implement statsSubscriptionCmd() in dashboard.go to subscribe to stats stream
+- [ ] T098 [US1] Implement statsMsg handler in DashboardModel.Update()
+- [ ] T099 [P] [TEST] Add tests for stats subscription and message handling (mock stats channel, verify UI updates)
+- [ ] T100 [US1] Enhance service_list.go rendering to show CPU/Memory usage per container (inline sparklines)
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md" - "Progress Bar" section for bar rendering
+  > Use RenderProgressBar() pattern with filled/empty blocks (▓/░) or vertical bars (▁▂▃▄▅▆▇█) for sparklines
+- [ ] T101 [US1] Add basic port mapping display in detail panel ("8080:80/tcp")
+- [ ] T102 [US1] Update detail panel to show CreatedAt and Uptime
+- [ ] T103 [P] [TEST] Create internal/views/dashboard/service_list_test.go with tests for enhanced rendering (test CPU/mem formatting, port display)
+- [ ] T104 [US1] Implement auto-refresh for stats every 2 seconds using tea.Tick
+- [ ] T105 [US1] Add visual loading indicator while waiting for stats
+- [ ] T106 [US1] Add sparkline component for CPU/Memory history (last 60 data points)
+- [ ] T107 [P] [TEST] Add UI snapshot tests for dashboard with stats data (verify layout, sparklines render correctly)
+- [ ] T108 [US1] Optimize rendering to update only changed stats (not entire container list)
+- [ ] T109 [TEST] Performance test: Verify stats refresh <200ms with 10 containers, <50ms panel switching
+- [ ] T110 [TEST] Manual test per US1 acceptance: Open dashboard, verify stats update every 2s, CPU/mem sparklines visible
 
-**Checkpoint**: Dashboard enhanced with live monitoring - CPU/memory stats, detailed info panel
+**Checkpoint**: Dashboard enhanced with real-time monitoring, performance targets met, tests passing
 
 ---
 
@@ -172,28 +251,42 @@
 
 ### Implementation for User Story 3
 
-- [ ] T084 [P] [US3] Create LogStream entity struct in internal/docker/client.go (ContainerID, Buffer, Following, FilterText, Head, Size)
-- [ ] T085 [US3] Implement LogStream.Append() method for ring buffer management
-- [ ] T086 [US3] Implement LogStream.GetFilteredLines() method with search filter support
-- [ ] T087 [US3] Implement StreamLogs(containerID string, since time.Time, follow bool) method in internal/docker/client.go
-- [ ] T088 [P] [US3] Create internal/views/dashboard/logs.go with LogPanel struct
-- [ ] T089 [US3] Add logPanel and logVisible fields to DashboardModel
-- [ ] T090 [US3] Implement 'l' key handler to toggle log panel visibility
-- [ ] T091 [US3] Create toggleLogPanelMsg type in internal/app/messages.go
-- [ ] T092 [US3] Implement log panel opening: create Bubbles viewport.Model, resize layout
-- [ ] T093 [US3] Implement streamLogsCmd() to launch background log streaming
-- [ ] T094 [US3] Implement logLineMsg handler to append lines to viewport
-- [ ] T095 [US3] Implement renderLogs() method in logs.go
-- [ ] T096 [US3] Update View() to show logs panel when visible (detail 30%, logs 70%)
-- [ ] T097 [US3] Implement 'f' key handler to toggle follow mode
-- [ ] T098 [US3] Implement auto-scroll when Following=true
-- [ ] T099 [US3] Implement '/' key for search/filter mode
-- [ ] T100 [US3] Implement scroll navigation (↑/↓/j/k/g/G)
-- [ ] T101 [US3] Implement Esc/q to close logs panel
-- [ ] T102 [US3] Update footer with log shortcuts when visible
-- [ ] T103 [US3] Implement log buffer limit (10k lines)
+- [ ] T111 [P] [US3] Create LogStream entity struct in internal/docker/logs.go (Timestamp, Source [stdout/stderr], Message)
+- [ ] T112 [P] [TEST] Create internal/docker/logs_test.go with tests for log parsing and filtering
+- [ ] T113 [P] [US3] Create internal/views/logs/logs.go with LogsModel struct (viewport, containerID, logLines, isStreaming fields)
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Viewport Component" section
+  > Use viewport.New(width, height) from Bubbles. Perfect for scrollable logs with auto-scroll.
+  > See "Real-World Examples → Log Viewer with Auto-Scroll" for complete pattern.
+- [ ] T114 [US3] Implement StreamLogs(containerID string, tail int) method in internal/docker/logs.go per docker-api.md
+- [ ] T115 [P] [TEST] Add tests for StreamLogs (mock container logs API, test channel output, error handling)
+- [ ] T116 [US3] Add logLineMsg type to internal/app/messages.go per ui-events.md
+- [ ] T117 [US3] Implement LogsModel.Init() to subscribe to log stream
+- [ ] T118 [US3] Implement logLineMsg handler in LogsModel.Update() to append to viewport
+- [ ] T119 [P] [TEST] Create internal/views/logs/logs_test.go with tests for log message handling (test append, scrolling, stream start/stop)
+- [ ] T120 [US3] Implement LogsModel.View() with Bubbles viewport.Model (auto-scroll to bottom)
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Viewport Component" usage
+  > Use m.viewport.GotoBottom() for auto-scroll in follow mode. Handle scroll keys (↑↓ PgUp PgDn) via viewport.Update()
+- [ ] T121 [US3] Wire LogsModel into RootModel, bind 'l' key in DashboardModel to switch to logs view
+- [ ] T122 [US3] Add stdout/stderr color coding (green/red) to log rendering
+- [ ] T123 [P] [TEST] Add tests for color coding logic (verify ANSI codes applied correctly)
+- [ ] T124 [US3] Implement scroll controls (↑/↓/PgUp/PgDn) for viewport navigation
+- [ ] T125 [US3] Add 'f' key to toggle follow mode (auto-scroll vs. manual scroll)
+- [ ] T126 [US3] Implement timestamp formatting (HH:MM:SS.mmm) for log lines
+- [ ] T127 [P] [TEST] Add tests for follow mode toggle and scroll controls
+- [ ] T128 [US3] Add log filtering UI: '/' key to show search input, filter logs by text
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Text Input Component" for search box
+  > Toggle visibility with '/' key. Filter log lines before setting viewport content. Use strings.Contains() or regex.
+- [ ] T129 [US3] Implement search input handler using Bubbles textinput.Model
+- [ ] T130 [US3] Add regex support to log filter (toggle with 'Alt+r')
+- [ ] T131 [P] [TEST] Add tests for log filtering (text search, regex patterns, error handling)
+- [ ] T132 [US3] Add 'c' key to clear log buffer
+- [ ] T133 [US3] Add footer with shortcuts: "f:follow  /:search  c:clear  Esc:back  q:quit"
+- [ ] T134 [US3] Implement graceful cleanup: stop log stream when switching views or quitting
+- [ ] T135 [P] [TEST] Create tests/integration/logs_test.go - integration test for full log streaming workflow
+- [ ] T136 [TEST] Performance test: Verify log rendering <100ms for 1000 lines, memory stable under continuous streaming
+- [ ] T137 [TEST] Manual test per US3 acceptance: Open logs, verify streaming, test follow toggle, search, clear
 
-**Checkpoint**: Log viewer functional with follow mode and search
+**Checkpoint**: Log viewer functional, streaming works, filtering implemented, tests passing
 
 ---
 
@@ -205,22 +298,30 @@
 
 ### Implementation for User Story 5
 
-- [ ] T104 [P] [US5] Create Project entity struct in internal/docker/client.go (Name, Path, ComposeFile, IsActive, ContainerCount, Is20iStack)
-- [ ] T105 [US5] Implement is20iStack() detection function (check for .20i-local OR apache+mariadb+nginx)
-- [ ] T106 [US5] Implement GetComposeProject(composeFilePath string) method
-- [ ] T107 [US5] Create internal/docker/filters.go with ScanForProjects() function
-- [ ] T108 [US5] Implement project detection filtering (20i stacks only)
-- [ ] T109 [US5] Implement GetContainerCount() function in filters.go
-- [ ] T110 [P] [US5] Create internal/views/projects/projects.go with ProjectListModel
-- [ ] T111 [US5] Implement ProjectListModel.Init() to scan projects
-- [ ] T112 [US5] Implement navigation and selection in ProjectListModel.Update()
-- [ ] T113 [US5] Implement ProjectListModel.View() with project list
-- [ ] T114 [US5] Add 'p' key handler in RootModel to open project switcher
-- [ ] T115 [US5] Implement project switching logic
-- [ ] T116 [US5] Clear state when switching projects
-- [ ] T117 [US5] Update header to show current project name
+- [ ] T138 [P] [US5] Create Project entity struct in internal/docker/client.go (Name, Path, IsActive)
+- [ ] T139 [P] [TEST] Create internal/docker/project_test.go with tests for project detection and validation
+- [ ] T140 [US5] Implement DiscoverProjects(basePath string) method in internal/docker/client.go to scan for docker-compose.yml
+- [ ] T141 [P] [TEST] Add tests for DiscoverProjects (mock filesystem, test single project, multiple projects, no compose file)
+- [ ] T142 [P] [US5] Create internal/views/projects/projects.go with ProjectListModel struct (projects list.Model, basePath field)
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "List Component" section
+  > Use Bubbles list.Model for scrollable, filterable project list. Define list.Item interface for Project entity.
+  > See "List Component" example for item implementation (Title/Description/FilterValue methods)
+- [ ] T143 [US5] Implement ProjectListModel.Init() to discover projects
+- [ ] T144 [US5] Implement ProjectListModel.View() with Bubbles list.Model
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "List Component" View() section
+  > Simply return m.list.View() - Bubbles handles all rendering, navigation, filtering. Update list in Update() method.
+- [ ] T145 [P] [TEST] Create internal/views/projects/projects_test.go with tests for project list rendering and selection
+- [ ] T146 [US5] Wire ProjectListModel into RootModel, bind 'p' key in DashboardModel to switch to projects view
+- [ ] T147 [US5] Implement project selection: Enter key to switch active project
+- [ ] T148 [US5] Implement projectSwitchMsg to notify RootModel of project change
+- [ ] T149 [P] [TEST] Add tests for project switching workflow (test message flow, verify dashboard updates)
+- [ ] T150 [US5] Update DashboardModel to reload containers when projectSwitchMsg received
+- [ ] T151 [US5] Add visual indicator in dashboard header showing current project name
+- [ ] T152 [US5] Add footer in projects view: "Enter:select  Esc:back  q:quit"
+- [ ] T153 [P] [TEST] Create tests/integration/projects_test.go - integration test for multi-project workflow
+- [ ] T154 [TEST] Manual test per US5 acceptance: Discover multiple projects, switch between them, verify container list updates
 
-**Checkpoint**: Project switcher working (optional feature)
+**Checkpoint**: Multi-project support working, can switch between stacks, tests passing
 
 ---
 
@@ -228,31 +329,48 @@
 
 **Purpose**: Production-ready improvements for release
 
-- [ ] T118 [P] Create tui/README.md with installation instructions
-- [ ] T119 [P] Document usage in tui/README.md (keyboard shortcuts, requirements)
-- [ ] T120 [P] Add "TUI Interface" section to repository README.md
-- [ ] T121 [P] Add CHANGELOG.md entry for v2.0.0
-- [ ] T122 Update .gitignore to exclude tui/20i-tui binary
-- [ ] T123 [P] Implement Docker daemon retry logic (auto-retry every 5s, show error screen)
-- [ ] T124 [P] Create error screen component in internal/ui/components.go
-- [ ] T125 Implement terminal size validation (minimum 80x24)
-- [ ] T126 Implement SIGWINCH handler for terminal resize
-- [ ] T127 [P] Create internal/views/help/help.go with HelpModel
-- [ ] T128 Implement '?' key handler in RootModel for help modal
-- [ ] T129 Implement help modal View() with keyboard shortcuts
-- [ ] T130 [P] Add inline code comments for Bubble Tea patterns
-- [ ] T131 [P] Add inline comments for Docker SDK usage
-- [ ] T132 [P] Add docstrings to all public functions
-- [ ] T133 Implement graceful shutdown on Ctrl-C
-- [ ] T134 Test with 4 running containers to verify functionality
-- [ ] T135 Test terminal resize behavior
-- [ ] T136 Test all keyboard shortcuts (s, r, S, R, D, q, arrows, vim keys)
-- [ ] T137 Verify error messages are user-friendly
-- [ ] T138 Run lifecycle validation: start stack, verify running, stop stack, verify stopped, destroy stack
-- [ ] T139 Add build target to Makefile for /usr/local/bin
-- [ ] T140 Create symlink 'tui' → '20i-tui' in Makefile
+- [ ] T155 [P] Apply consistent Lipgloss styling across all views (colors, borders, padding)
+  > **📖 Reference**: Review ALL styles against `/runbooks/research/lipgloss-styling-reference.md` - "Common Style Patterns"
+  > Ensure HeaderStyle, FooterStyle, PanelStyle, RowStyle are CONSISTENT across dashboard/logs/projects views.
+  > Use SAME color palette everywhere (ColorRunning, ColorStopped, ColorError, ColorBorder from T012)
+- [ ] T156 [P] Implement responsive layout: adjust panel widths based on terminal size
+  > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md" - "Common Gotchas → Hardcoding Dimensions"
+  > ALWAYS handle tea.WindowSizeMsg in Update(). Calculate panel widths from m.width, NOT hardcoded 80.
+  > Use calculated widths in View() to set style.Width(). Test with various terminal sizes (minimum 80x24).
+- [ ] T157 [P] Add global help modal ('?' key) with all keyboard shortcuts organized by view
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Help Component" section
+  > Use Bubbles help.Model with key.Binding structs. Renders ShortHelp (footer) and FullHelp (modal) automatically.
+  > See keyMap struct example - define all shortcuts with descriptions
+- [ ] T158 [P] [TEST] Create internal/ui/styles_test.go with tests for style consistency (verify color scheme, spacing)
+- [ ] T159 Improve error messages: add "What to do next" suggestions for common failures
+- [ ] T160 Add loading spinners for long operations (compose down, stats initialization)
+  > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md" - "Spinner Component" section
+  > Use Bubbles spinner.Model. Create with spinner.New(), set style (spinner.Dot, spinner.Line, etc.)
+  > Update spinner in Update(), render in View() while isLoading flag is true
+- [ ] T161 Implement graceful degradation: fallback UI if Docker daemon unreachable
+- [ ] T162 [TEST] Add accessibility tests: verify keyboard-only navigation, screen reader compatibility hints
+- [ ] T163 Add startup banner with version number and Docker status
+- [ ] T164 Implement config file support: ~/.20i-stack-manager.yml for default project path
+- [ ] T165 Add '--project' CLI flag to override default project
+- [ ] T166 Add '--version' and '--help' CLI flags
+- [ ] T167 [TEST] Create tests/e2e/ directory with end-to-end test suite using Bubble Tea test utilities
+- [ ] T168 [TEST] Create e2e test: Launch app, navigate dashboard, perform lifecycle action, verify result
+- [ ] T169 [TEST] Create e2e test: Open logs, verify streaming, apply filter, verify results
+- [ ] T170 [TEST] Create e2e test: Switch projects, verify containers reload
+- [ ] T171 [TEST] Create regression test suite: Run all unit + integration + e2e tests in sequence
+- [ ] T172 [TEST] Performance regression: Benchmark startup time <2s, memory usage <30MB, stats refresh <200ms
+- [ ] T173 [TEST] Cross-platform test: Run test suite on macOS and Linux (GitHub Actions)
+- [ ] T174 Update README.md with screenshots, installation instructions, keyboard shortcuts reference
+- [ ] T175 Create TESTING.md with guide for running unit/integration/e2e tests, adding new tests
+- [ ] T176 Add inline code comments for complex Bubble Tea message flows
+- [ ] T177 Generate API documentation: `go doc` for all exported types
+- [ ] T178 Create ARCHITECTURE.md diagram showing Model-Update-View flow
+- [ ] T179 [TEST] Documentation test: Verify all CLI flags documented, all shortcuts in help modal
+- [ ] T180 [TEST] Final acceptance test: Run all 5 user story acceptance scenarios end-to-end
+- [ ] T181 [TEST] Test coverage report: Generate HTML coverage report, verify >85% total coverage
+- [ ] T182 [TEST] Run `make test-all` (unit + integration + e2e + regression), all tests must pass
 
-**Checkpoint**: Production-ready TUI that replicates 20i-gui core functions
+**Checkpoint**: Production-ready - all features polished, comprehensive test suite passing, documentation complete, >85% coverage
 
 ---
 
@@ -283,16 +401,20 @@
 ### Recommended Execution Order
 
 **MINIMUM VIABLE PRODUCT (20i-gui replacement)**:
-1. Phase 1: Setup (T001-T011)
-2. Phase 2: Foundational (T012-T022) ← FOUNDATION COMPLETE
-3. Phase 3: User Story 2 - Lifecycle (T023-T055) ← **MVP CHECKPOINT** ✅
-4. Phase 4: User Story 4 - Destroy (T056-T067) ← **BASELINE COMPLETE** ✅
-5. Phase 8: Polish (T118-T140) ← Production-ready
+1. Phase 1: Setup (T001-T013) - Initialize project with test infrastructure
+2. Phase 2: Foundational (T014-T025) - Docker client + root model with tests
+3. Phase 3: User Story 2 - Lifecycle (T026-T072) - MVP with comprehensive tests
+4. Phase 4: User Story 4 - Destroy (T073-T089) - Baseline complete with regression tests
+5. Phase 8: Polish (T155-T182) - Production-ready with full test suite
 
-**STOP HERE FOR v1.0 RELEASE** - You now have full 20i-gui functionality in TUI
+**STOP HERE FOR v1.0 RELEASE** - You now have full 20i-gui functionality in TUI with >85% test coverage
 
 **ENHANCED VERSION (add monitoring & debugging)**:
-6. Phase 5: User Story 1 - Dashboard (T068-T083) ← Adds live stats
+6. Phase 5: User Story 1 - Dashboard monitoring (T090-T110) - Live stats with performance tests
+7. Phase 6: User Story 3 - Log viewer (T111-T137) - Streaming logs with integration tests
+8. Phase 7: User Story 5 - Project switcher (T138-T154) - Multi-project with e2e tests
+
+**Total Tasks**: 182 (includes ~60 test tasks across all phases)
 7. Phase 6: User Story 3 - Logs (T084-T103) ← Adds log viewer
 8. Phase 7: User Story 5 - Projects (T104-T117) ← Adds multi-project
 
@@ -301,8 +423,8 @@
 - After Phase 2:
   - Dev A: User Story 2 Lifecycle (T023-T055) ← PRIORITY, BLOCKS OTHERS
   - Once US2 complete:
-    - Dev B: User Story 4 Destroy (T056-T067) ← Completes baseline
-    - Dev C: User Story 1 Dashboard enhancement (T068-T083) ← Can run parallel
+    - Dev B: User Story 4 Destroy (T058-T069) ← Completes baseline
+    - Dev C: User Story 1 Dashboard enhancement (T070-T083) ← Can run parallel
     - Dev D: User Story 3 Logs (T084-T103) ← Can run parallel  
     - Dev E: User Story 5 Projects (T104-T117) ← Can run parallel
 - Team: Complete Phase 8 together (T118-T140)
@@ -329,12 +451,12 @@
 - T033-T035 can run in parallel (message types)
 - T047-T049 can run in parallel (command functions)
 
-**User Story 4 - Destroy (T056-T067)**:
-- T056 can run in parallel with T057 (different files)
+**User Story 4 - Destroy (T058-T069)**:
+- T058 can run in parallel with T059 (different files)
 
-**User Story 1 - Dashboard Enhancement (T068-T083)**:
-- T068-T069 can run in parallel (different entity structs)
-- T071-T072 can run in parallel (stats.go methods)
+**User Story 1 - Dashboard Enhancement (T070-T083)**:
+- T070-T071 can run in parallel (different entity structs)
+- T073-T074 can run in parallel (stats.go methods)
 - T078 can run in parallel with stats work
 
 **User Story 3 - Logs (T084-T103)**:
@@ -417,29 +539,44 @@ Each phase delivers testable value:
 
 ## Task Summary
 
-- **Total Tasks**: 150
-- **Setup Phase**: 11 tasks (T001-T011)
-- **Foundational Phase**: 11 tasks (T012-T022)
-- **User Story 1 (Dashboard)**: 24 tasks (T023-T046)
-- **User Story 2 (Lifecycle)**: 21 tasks (T047-T067)
-- **User Story 3 (Logs)**: 24 tasks (T068-T091)
-- **User Story 4 (Destroy)**: 13 tasks (T092-T104)
-- **User Story 5 (Projects)**: 20 tasks (T105-T124)
-- **Polish Phase**: 26 tasks (T125-T150)
+- **Total Tasks**: 182 (includes comprehensive testing throughout all phases)
+- **Setup Phase**: 13 tasks (T001-T013) - includes test infrastructure
+- **Foundational Phase**: 12 tasks (T014-T025) - includes foundation tests
+- **User Story 2 (Lifecycle) - MVP**: 47 tasks (T026-T072) 🎯 - includes unit + integration tests
+- **User Story 4 (Destroy) - Baseline**: 17 tasks (T073-T089) ✅ - includes regression tests
+- **User Story 1 (Dashboard Enhancement)**: 21 tasks (T090-T110) - includes performance tests
+- **User Story 3 (Logs)**: 27 tasks (T111-T137) - includes streaming tests
+- **User Story 5 (Projects)**: 17 tasks (T138-T154) - includes e2e tests
+- **Polish Phase**: 28 tasks (T155-T182) - includes comprehensive test suite
+
+**Test Coverage Breakdown**:
+- Unit tests: ~30 tasks (Docker client, UI components, message handlers, entities)
+- Integration tests: ~15 tasks (lifecycle workflow, destroy workflow, logs streaming, projects)
+- Performance tests: ~5 tasks (stats refresh, log rendering, startup time, memory usage)
+- E2E tests: ~5 tasks (full user journeys using Bubble Tea test utilities)
+- Manual acceptance tests: ~5 tasks (per user story acceptance criteria)
+- Total test tasks: ~60 (33% of all tasks)
 
 **Parallel Opportunities**:
-- Setup: 4 tasks can run in parallel
-- Foundational: 5 tasks can run in parallel
-- User Story 1: 10 tasks can run in parallel across entity/view/stats work
-- User Story 2: 9 tasks can run in parallel (Docker methods + messages)
-- User Story 3: 5 tasks can run in parallel
-- User Story 4: 2 tasks can run in parallel
-- User Story 5: 5 tasks can run in parallel
-- Polish: 8 tasks can run in parallel
+- Setup: 4 tasks can run in parallel (Go modules, deps, test mocks)
+- Foundational: 5 tasks can run in parallel (Docker client + tests, root model + tests)
+- User Story 2: 12 tasks can run in parallel (Docker methods + tests, messages + tests, UI + tests)
+- User Story 4: 3 tasks can run in parallel (modal component + tests)
+- User Story 1: 8 tasks can run in parallel (entity/view/stats work + tests)
+- User Story 3: 6 tasks can run in parallel (log streaming + tests)
+- User Story 5: 5 tasks can run in parallel (project detection + tests)
+- Polish: 8 tasks can run in parallel (styling, e2e tests, docs)
 
-**Estimated Time to MVP** (US1-4 complete):
-- Single developer: 18-20 hours (per quickstart.md)
-- Team of 3: 8-10 hours (parallel execution after Foundational)
+**Estimated Time with Testing** (US2+US4 baseline):
+- Single developer: 24-28 hours (includes writing tests)
+- Team of 3: 12-14 hours (parallel execution after Foundational)
+
+**Test Execution Strategy**:
+- Run unit tests after each component implementation (`go test ./internal/...`)
+- Run integration tests at end of each user story phase
+- Run regression suite after each phase to ensure no breakage
+- Run full test suite (`make test-all`) before merging to main
+- Target: >85% code coverage for production readiness
 
 **Independent Test Criteria**:
 - **US1**: Dashboard displays 4 services with status icons and live CPU/memory bars
@@ -448,9 +585,11 @@ Each phase delivers testable value:
 - **US4**: Pressing 'D' shows warning, typing "yes" removes all volumes and containers
 - **US5**: Pressing 'p' shows project list, selecting switches context, dashboard reloads
 
-**Format Validation**: ✅ All 150 tasks follow strict checklist format:
+**📚 Remember**: Keep `/runbooks/research/QUICK-REFERENCE.md` open while implementing ALL tasks!
+
+**Format Validation**: ✅ All 182 tasks follow strict checklist format:
 - ✅ Checkbox: `- [ ]` prefix on every task
-- ✅ Task ID: T001-T150 sequential
+- ✅ Task ID: T001-T140 sequential (T141-T142 reserved for future)
 - ✅ [P] marker: Only on parallelizable tasks (different files, no blockers)
 - ✅ [Story] label: US1-US5 on all user story phase tasks
 - ✅ File paths: Exact paths included in descriptions (e.g., internal/docker/client.go)

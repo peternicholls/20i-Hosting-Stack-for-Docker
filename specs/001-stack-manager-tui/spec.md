@@ -14,11 +14,17 @@
 A professional terminal user interface (TUI) built with Bubble Tea framework to replace and enhance the existing 20i-gui bash script. This MVP replicates all 20i-gui functionality (start/stop/restart/status/logs/destroy) with a modern, keyboard-driven interface following best practices from lazydocker, lazygit, k9s, and gh-dash.
 
 **Phase 1 Scope** (MVP - this spec):
-- Dashboard view with 3-panel layout (service list | detail | help footer)
-- Container lifecycle operations (start, stop, restart, remove)
-- Real-time status and resource monitoring
-- Log viewer with follow mode
-- Project selection and switching
+- **CORE BASELINE** (replicates 20i-gui):
+  - Container lifecycle operations (start, stop, restart, remove) - **PRIORITY 1**
+  - Service list view with status indicators
+  - Stack destruction with confirmation - **PRIORITY 2**
+  
+- **ENHANCEMENTS** (beyond 20i-gui):
+  - Real-time CPU/memory monitoring dashboard
+  - Log viewer with follow mode
+  - Project selection and switching
+
+**Implementation Order**: Lifecycle first (get stacks running), then destroy (complete baseline), then monitoring/logs (enhancements)
 
 **Phase 2+** (future specs):
 - Configuration editor (replaces manual .20i-local editing)
@@ -38,15 +44,15 @@ A professional terminal user interface (TUI) built with Bubble Tea framework to 
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Dashboard Overview (Priority: P0 - Core)
+### User Story 1 - Dashboard Overview (Priority: P1 - Enhancement)
 
-**Replaces**: 20i-gui "View Status" command
+**Replaces**: N/A (Enhancement beyond 20i-gui baseline)
 
-As a developer, I want to see an at-a-glance dashboard of all 20i stack services with status, CPU, and memory so that I can quickly assess stack health without running `docker ps`.
+As a developer, I want to see an at-a-glance dashboard of all 20i stack services with live CPU and memory monitoring so that I can assess stack health without running separate monitoring tools.
 
-**Why this priority**: The dashboard is the entry point and primary view - users spend 80% of time here.
+**Why this priority**: Enhanced monitoring feature. The baseline TUI (US2 Lifecycle + US4 Destroy) provides status verification. This adds performance metrics for power users.
 
-**Independent Test**: Start TUI from project directory with running stack, verify 4 services display with green status, CPU bars, memory usage.
+**Independent Test**: After lifecycle MVP working, start TUI, verify services show with CPU bars and memory usage updating every 2s.
 
 **Acceptance Scenarios**:
 
@@ -57,13 +63,13 @@ As a developer, I want to see an at-a-glance dashboard of all 20i stack services
 
 ---
 
-### User Story 2 - Container Lifecycle (Priority: P0 - Core)
+### User Story 2 - Container Lifecycle (Priority: P0 - Core) 🎯 MVP
 
 **Replaces**: 20i-gui "Start Stack", "Stop Stack", "Restart Stack" commands
 
-As a developer, I want to start, stop, restart individual services or the entire stack so that I can control my development environment without leaving the TUI.
+As a developer, I want to start, stop, restart individual services or the entire stack so that I can control my development environment without leaving the TUI - **THIS IS THE PRIMARY USE CASE**.
 
-**Why this priority**: Lifecycle management is the primary use case - matches 20i-gui menu options 1-3.
+**Why this priority**: Lifecycle management is the core baseline - getting stacks running and verified. This matches 20i-gui menu options 1-3 and must work FIRST before adding monitoring enhancements.
 
 **Independent Test**: Select apache service, press `s` to stop, verify status changes to gray "Stopped"; press `s` again, verify starts and turns green.
 
