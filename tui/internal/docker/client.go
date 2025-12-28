@@ -25,6 +25,11 @@ import (
 
 var execCommand = exec.CommandContext
 
+// Operation timeout constants
+const (
+	statsTimeout = 3 * time.Second // Timeout for fetching container stats
+)
+
 // Sentinel errors returned by the Docker client wrapper.
 var (
 	// ErrDaemonUnreachable means we couldn't reach the Docker daemon (not running or socket missing)
@@ -213,7 +218,7 @@ func (c *Client) RestartContainer(containerID string, timeout int) error {
 // GetContainerStats retrieves CPU usage for a container using one-shot stats API.
 // Returns CPU percentage (0-100) or 0 if stats unavailable.
 func (c *Client) GetContainerStats(containerID string) (float64, error) {
-	statsCtx, cancel := context.WithTimeout(c.ctx, 3*time.Second)
+	statsCtx, cancel := context.WithTimeout(c.ctx, statsTimeout)
 	defer cancel()
 
 	resp, err := c.cli.ContainerStats(statsCtx, containerID, false) // stream=false for one-shot
@@ -388,10 +393,12 @@ func containerService(summary container.Summary) string {
 
 // calculateCPUPercent computes CPU usage percentage from Docker stats.
 // Formula: ((CPUDelta / SystemCPUDelta) * NumCPUs) * 100
+// Returns 0 if PreCPUStats is not available (first stats call) or if deltas are invalid.
 func calculateCPUPercent(stats *container.StatsResponse) float64 {
 	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
 
+	// Check if we have valid previous stats (not the first call)
 	if systemDelta > 0 && cpuDelta > 0 {
 		numCPUs := float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
 		if numCPUs == 0 {
@@ -400,5 +407,6 @@ func calculateCPUPercent(stats *container.StatsResponse) float64 {
 		return (cpuDelta / systemDelta) * numCPUs * 100.0
 	}
 
+	// Return 0 for first stats call or invalid deltas (acceptable behavior)
 	return 0
 }

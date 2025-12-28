@@ -54,7 +54,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		// Cancel refresh timer when switching views
+		// Cancel refresh timer when switching views (early return is intentional)
+		// These keys trigger view switches, so we cancel refresh and exit immediately
 		switch msg.String() {
 		case "esc", "?", "p":
 			m.refreshActive = false
