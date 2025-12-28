@@ -107,7 +107,8 @@ type StackDestroyMsg struct {
 type StackOutputMsg struct {
 	Line      string // Line of output from compose command
 	IsError   bool   // True if from stderr
-	Timestamp int64  // Unix timestamp
+	// TODO: Populate Timestamp from compose output when streaming is implemented in compose.go.
+	Timestamp int64 // Unix timestamp
 }
 
 // StackStatusMsg sent when stack operation completes
