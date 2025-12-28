@@ -1,7 +1,7 @@
 # 20i Stack - Docker Development Environment
 
-[![Version](https://img.shields.io/github/v/release/peternicholls/20i-stack)](https://github.com/peternicholls/20i-stack/releases)
-[![License](https://img.shields.io/github/license/peternicholls/20i-stack)](LICENSE)
+[![Version](https://img.shields.io/github/v/release/peternicholls/20i-Hosting-Stack-for-Docker)](https://github.com/peternicholls/20i-Hosting-Stack-for-Docker/releases)
+[![License](https://img.shields.io/github/license/peternicholls/20i-Hosting-Stack-for-Docker)](LICENSE)
 
 **A reusable, multi-platform Docker stack based on [20i's](https://www.20i.com) shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
 
