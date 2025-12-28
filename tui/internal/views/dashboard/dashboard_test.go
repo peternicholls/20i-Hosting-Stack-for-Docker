@@ -73,18 +73,26 @@ func TestRefreshTimer_CancelsOnViewSwitch(t *testing.T) {
 	model := NewModel(nil, "test-project")
 	model.refreshActive = true // Simulate active refresh
 	
-	testKeys := []string{"esc", "?", "p"}
+	testCases := []struct {
+		name   string
+		keyMsg tea.KeyMsg
+	}{
+		{"escape key", tea.KeyMsg{Type: tea.KeyEsc}},
+		{"? key", tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")}},
+		{"p key", tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")}},
+	}
 	
-	for _, key := range testKeys {
-		m := model
-		m.refreshActive = true
-		
-		keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
-		updatedModel, _ := m.Update(keyMsg)
-		
-		if updatedModel.refreshActive {
-			t.Errorf("Refresh should be cancelled on key '%s'", key)
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := model
+			m.refreshActive = true
+			
+			updatedModel, _ := m.Update(tc.keyMsg)
+			
+			if updatedModel.refreshActive {
+				t.Errorf("Refresh should be cancelled on %s", tc.name)
+			}
+		})
 	}
 }
 

@@ -19,16 +19,15 @@ import (
 
 // Model represents the dashboard view state for Phase 3.
 type Model struct {
-	containers       []docker.Container
-	selectedIndex    int
-	projectName      string
-	dockerClient     *docker.Client
-	width            int
-	height           int
-	lastError        error
-	lastStatusMsg    string
-	refreshActive    bool // Whether auto-refresh timer is active
-	refreshCancelCmd tea.Cmd // Command to cancel the refresh timer
+	containers    []docker.Container
+	selectedIndex int
+	projectName   string
+	dockerClient  *docker.Client
+	width         int
+	height        int
+	lastError     error
+	lastStatusMsg string
+	refreshActive bool // Whether auto-refresh timer is active
 }
 
 // NewModel creates a dashboard model with required dependencies.
