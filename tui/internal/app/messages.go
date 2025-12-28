@@ -98,6 +98,11 @@ type StackRestartMsg struct {
 	CodeDir string // Project directory to restart stack for
 }
 
+// StackDestroyMsg sent when user requests to destroy the stack (with volumes)
+type StackDestroyMsg struct {
+	CodeDir string // Project directory to destroy stack for
+}
+
 // StackOutputMsg sent when streaming compose command output
 type StackOutputMsg struct {
 	Line      string // Line of output from compose command

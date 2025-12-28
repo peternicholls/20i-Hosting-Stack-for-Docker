@@ -22,6 +22,32 @@ type ComposeResult struct {
 	Error   error
 }
 
+// getEffectiveCodeDir returns the effective code directory, defaulting to current directory if empty.
+func getEffectiveCodeDir(codeDir string) (string, error) {
+	if codeDir == "" {
+		var err error
+		codeDir, err = os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current directory: %w", err)
+		}
+	}
+	return codeDir, nil
+}
+
+// buildComposeProjectName builds the COMPOSE_PROJECT_NAME from the sanitized directory name.
+func buildComposeProjectName(codeDir string) string {
+	projectName := filepath.Base(codeDir)
+	return project.SanitizeProjectName(projectName)
+}
+
+// buildComposeEnv builds the environment variables for docker compose commands.
+func buildComposeEnv(codeDir string) []string {
+	env := os.Environ()
+	env = append(env, fmt.Sprintf("CODE_DIR=%s", codeDir))
+	env = append(env, fmt.Sprintf("COMPOSE_PROJECT_NAME=%s", buildComposeProjectName(codeDir)))
+	return env
+}
+
 // ComposeUp starts the Docker Compose stack in detached mode.
 // It validates STACK_FILE, builds the environment with CODE_DIR and COMPOSE_PROJECT_NAME,
 // and executes `docker compose -f $STACK_FILE up -d`.
@@ -41,29 +67,21 @@ func ComposeUp(stackFile, codeDir string) *ComposeResult {
 		}
 	}
 
-	// Default codeDir to current directory if not provided
-	if codeDir == "" {
-		var err error
-		codeDir, err = os.Getwd()
-		if err != nil {
-			return &ComposeResult{
-				Success: false,
-				Error:   fmt.Errorf("failed to get current directory: %w", err),
-			}
+	// Get effective code directory
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return &ComposeResult{
+			Success: false,
+			Error:   err,
 		}
 	}
-
-	// Build COMPOSE_PROJECT_NAME from sanitized directory name
-	projectName := filepath.Base(codeDir)
-	sanitizedName := project.SanitizeProjectName(projectName)
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "up", "-d")
 	
 	// Set environment variables
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CODE_DIR=%s", codeDir))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("COMPOSE_PROJECT_NAME=%s", sanitizedName))
+	cmd.Env = buildComposeEnv(codeDir)
 
 	// Execute command
 	output, err := cmd.CombinedOutput()
@@ -99,29 +117,21 @@ func ComposeDown(stackFile, codeDir string) *ComposeResult {
 		}
 	}
 
-	// Default codeDir to current directory if not provided
-	if codeDir == "" {
-		var err error
-		codeDir, err = os.Getwd()
-		if err != nil {
-			return &ComposeResult{
-				Success: false,
-				Error:   fmt.Errorf("failed to get current directory: %w", err),
-			}
+	// Get effective code directory
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return &ComposeResult{
+			Success: false,
+			Error:   err,
 		}
 	}
-
-	// Build COMPOSE_PROJECT_NAME from sanitized directory name
-	projectName := filepath.Base(codeDir)
-	sanitizedName := project.SanitizeProjectName(projectName)
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "down")
 	
 	// Set environment variables
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CODE_DIR=%s", codeDir))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("COMPOSE_PROJECT_NAME=%s", sanitizedName))
+	cmd.Env = buildComposeEnv(codeDir)
 
 	// Execute command
 	output, err := cmd.CombinedOutput()
@@ -158,28 +168,20 @@ func ComposeRestart(stackFile, codeDir string) *ComposeResult {
 	}
 
 	// Default codeDir to current directory if not provided
-	if codeDir == "" {
-		var err error
-		codeDir, err = os.Getwd()
-		if err != nil {
-			return &ComposeResult{
-				Success: false,
-				Error:   fmt.Errorf("failed to get current directory: %w", err),
-			}
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return &ComposeResult{
+			Success: false,
+			Error:   err,
 		}
 	}
-
-	// Build COMPOSE_PROJECT_NAME from sanitized directory name
-	projectName := filepath.Base(codeDir)
-	sanitizedName := project.SanitizeProjectName(projectName)
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "restart")
 	
 	// Set environment variables
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CODE_DIR=%s", codeDir))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("COMPOSE_PROJECT_NAME=%s", sanitizedName))
+	cmd.Env = buildComposeEnv(codeDir)
 
 	// Execute command
 	output, err := cmd.CombinedOutput()
@@ -217,28 +219,20 @@ func ComposeDestroy(stackFile, codeDir string) *ComposeResult {
 	}
 
 	// Default codeDir to current directory if not provided
-	if codeDir == "" {
-		var err error
-		codeDir, err = os.Getwd()
-		if err != nil {
-			return &ComposeResult{
-				Success: false,
-				Error:   fmt.Errorf("failed to get current directory: %w", err),
-			}
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return &ComposeResult{
+			Success: false,
+			Error:   err,
 		}
 	}
-
-	// Build COMPOSE_PROJECT_NAME from sanitized directory name
-	projectName := filepath.Base(codeDir)
-	sanitizedName := project.SanitizeProjectName(projectName)
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "down", "-v")
 	
 	// Set environment variables
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CODE_DIR=%s", codeDir))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("COMPOSE_PROJECT_NAME=%s", sanitizedName))
+	cmd.Env = buildComposeEnv(codeDir)
 
 	// Execute command
 	output, err := cmd.CombinedOutput()
