@@ -96,9 +96,15 @@ Add to your `.zshrc`:
 
 ```bash
 # 20i stack configuration
-STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+# See zsh-example-script.zsh in the repo for full implementation
+if [[ -n "${STACK_FILE:-}" ]]; then
+    STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
+else
+    STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+    STACK_FILE="$STACK_HOME/docker-compose.yml"
+fi
 
-# Functions (see copy of zshrc.txt for full implementations)
+# Functions (see zsh-example-script.zsh for full implementations)
 20i-up() { ... }     # Start stack
 20i-down() { ... }   # Stop stack
 20i-status() { ... } # View status
@@ -108,7 +114,9 @@ STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
 alias 20i='20i-status'
 alias dcu='20i-up'
 alias dcd='20i-down'
-alias 20i-gui='$STACK_HOME/20i-gui'
+20i-gui() {
+    "$STACK_HOME/20i-gui" "$@"
+}
 ```
 
 ## Workflow Examples

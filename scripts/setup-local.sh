@@ -16,5 +16,6 @@ echo "Next steps:"
 echo "  1) Edit .env if you want to override defaults (e.g., MYSQL_PASSWORD)."
 echo "  2) (Optional) set COMPOSE_PROJECT_NAME by running: export COMPOSE_PROJECT_NAME=\$(basename \$(pwd))"
 echo "  3) Start the stack: docker compose up -d"
-
-echo "If you intend to use the macOS Automator workflows, they will honor the STACK_FILE env var, or fall back to:\n  $HOME/docker/20i-stack/docker-compose.yml"
+echo ""
+echo "If you intend to use the macOS Automator workflows, they will honor the STACK_FILE env var, or fall back to:"
+echo "  \$HOME/docker/20i-stack/docker-compose.yml"

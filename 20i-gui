@@ -4,8 +4,15 @@
 # A simple dialog-based interface for managing 20i Docker stacks
 # Usage: 20i-gui
 
-STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
-STACK_FILE="$STACK_HOME/docker-compose.yml"
+# Determine STACK_FILE and STACK_HOME
+if [[ -n "${STACK_FILE:-}" ]]; then
+    # STACK_FILE is explicitly set
+    STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
+else
+    # Default: use STACK_HOME or fall back
+    STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+    STACK_FILE="$STACK_HOME/docker-compose.yml"
+fi
 
 # Check if stack directory exists
 if [[ ! -f "$STACK_FILE" ]]; then

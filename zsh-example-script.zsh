@@ -4,8 +4,14 @@
 
 # 20i stack configuration
 # Prefer explicit STACK_FILE (full path to docker-compose.yml). If not set, derive from STACK_HOME or default.
-STACK_FILE="${STACK_FILE:-${STACK_HOME:-$HOME/docker/20i-stack}/docker-compose.yml}"
-STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" >/dev/null 2>&1 && pwd)}"
+if [[ -n "${STACK_FILE:-}" ]]; then
+    # STACK_FILE is explicitly set, derive STACK_HOME from it
+    STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
+else
+    # Default: use STACK_HOME or fall back to $HOME/docker/20i-stack
+    STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+    STACK_FILE="$STACK_HOME/docker-compose.yml"
+fi
 
 # Function to start 20i stack
 20i-up() {
@@ -67,10 +73,7 @@ STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" >/dev/null 2>&1 && pwd
     fi
     
     docker compose -f "$STACK_FILE" logs -f "$@"
-} 
-
-
-
+}
 
 # Aliases for convenience
 alias 20i='20i-status'
@@ -79,4 +82,4 @@ alias dcd='20i-down'
 # GUI script shortcut - interactive menu for 20i stack management
 20i-gui() {
     "$STACK_HOME/20i-gui" "$@"
-} 
+}
