@@ -43,7 +43,7 @@ jobs:
               run: chmod +x scripts/release/validate.sh scripts/release/version.sh
 
             - name: Pre-release validation
-              if: github.event_name == 'push'
+              if: github.event_name == 'workflow_dispatch'
               run: |
                   echo "🔍 Running pre-release validation..."
                   scripts/release/validate.sh --all || {
