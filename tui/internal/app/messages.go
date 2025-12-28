@@ -82,3 +82,39 @@ type ProjectDetectedMsg struct {
 type TemplateInstalledMsg struct {
 	ProjectPath string
 }
+
+// StackStartMsg sent when user requests to start the stack
+type StackStartMsg struct {
+	CodeDir string // Project directory to start stack for
+}
+
+// StackStopMsg sent when user requests to stop the stack
+type StackStopMsg struct {
+	CodeDir string // Project directory to stop stack for
+}
+
+// StackRestartMsg sent when user requests to restart the stack
+type StackRestartMsg struct {
+	CodeDir string // Project directory to restart stack for
+}
+
+// StackDestroyMsg sent when user requests to destroy the stack (with volumes)
+type StackDestroyMsg struct {
+	CodeDir string // Project directory to destroy stack for
+}
+
+// StackOutputMsg sent when streaming compose command output
+type StackOutputMsg struct {
+	Line      string // Line of output from compose command
+	IsError   bool   // True if from stderr
+	// TODO: Populate Timestamp from compose output when streaming is implemented in compose.go.
+	Timestamp int64 // Unix timestamp
+}
+
+// StackStatusMsg sent when stack operation completes
+type StackStatusMsg struct {
+	Operation string // "start", "stop", "restart", "destroy"
+	Success   bool   // True if operation succeeded
+	Message   string // Human-readable status message
+	Error     error  // Error if operation failed
+}
