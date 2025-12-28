@@ -116,7 +116,7 @@ func copyDir(src, dst string) error {
 		if info.IsDir() {
 			// Create directory hierarchy with a sane default mode, then
 			// explicitly set permissions to match the source directory.
-			if err := os.MkdirAll(destPath, 0o755); err != nil {
+			if err := os.MkdirAll(destPath, 0755); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
 			}
 			if err := os.Chmod(destPath, info.Mode().Perm()); err != nil {
