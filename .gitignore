@@ -45,6 +45,11 @@ node_modules/
 dist/
 build/
 
+# Release artifacts
+dist/*.tar.gz
+dist/*.sha256
+dist/install.sh
+
 # Test files
 test-site/
 demo-site/

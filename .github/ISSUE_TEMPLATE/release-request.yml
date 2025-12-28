@@ -1,0 +1,73 @@
+name: 🚀 Release Request
+description: Request a new release of 20i Stack
+title: "[Release]: "
+labels: ["release"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for requesting a release! This will help maintainers track and prioritize releases.
+
+  - type: dropdown
+    id: release-type
+    attributes:
+      label: Release Type
+      description: What type of release are you requesting?
+      options:
+        - Major (Breaking changes)
+        - Minor (New features)
+        - Patch (Bug fixes)
+        - Pre-release (Alpha/Beta/RC)
+    validations:
+      required: true
+
+  - type: input
+    id: suggested-version
+    attributes:
+      label: Suggested Version
+      description: What version number do you suggest? (e.g., 2.0.0, 2.1.0-beta.1)
+      placeholder: "2.0.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: changes
+    attributes:
+      label: Changes to Include
+      description: What changes should be included in this release?
+      placeholder: |
+        - New feature X
+        - Bug fix Y
+        - Performance improvement Z
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+      description: Why is this release needed now?
+      placeholder: Critical bug fix, important feature, scheduled release, etc.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-release Checklist
+      description: Please verify the following before requesting a release
+      options:
+        - label: All planned features/fixes are merged to main
+        - label: CHANGELOG.md is up to date
+        - label: All tests are passing
+        - label: Documentation is updated
+        - label: Breaking changes are documented (if applicable)
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information relevant to this release
+      placeholder: Migration guides, deprecation notices, known issues, etc.
+    validations:
+      required: false

@@ -6,6 +6,37 @@
 
 <!-- Why is this change required? What problem does it solve? Link any relevant issues (e.g., "Fixes #123"). -->
 
+## Conventional Commit Format
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated changelog generation and semantic versioning.
+
+**Please ensure your PR title follows this format:**
+
+```
+<type>: <description>
+
+Examples:
+feat: add new configuration option
+fix: resolve port detection issue
+docs: update README with ARM instructions
+```
+
+**Common types:**
+- `feat:` - New feature (minor version bump)
+- `fix:` - Bug fix (patch version bump)
+- `docs:` - Documentation changes
+- `refactor:` - Code refactoring
+- `perf:` - Performance improvements
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+**Breaking changes:**
+```
+feat!: change default PHP version
+
+BREAKING CHANGE: Projects using PHP 7.x must update their configuration.
+```
+
 ## How Has This Been Tested?
 
 <!-- Describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. -->
