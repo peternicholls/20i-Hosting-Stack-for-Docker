@@ -13,11 +13,21 @@ Development tips:
 
 For maintainers and AI agents working on features:
 
-### Spec Synchronization
-All feature branches maintain a complete copy of the `specs/` directory for cross-reference. When completing work on a feature:
+### Pre-PR Checklist
+
+Before creating a final PR for your feature:
 
 1. **Complete your feature work** on the feature branch (e.g., `004-release-workflow`)
-2. **Sync specs across all branches** before final PR:
+2. **Merge latest changes from main/master**:
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout <your-feature-branch>
+   git merge main
+   # Resolve any conflicts
+   git push origin <your-feature-branch>
+   ```
+3. **Sync specs across all branches** before final PR:
    ```bash
    # From your feature branch with updated specs
    for branch in $(git branch | grep -E "^  [0-9]" | sed 's/^  //'); do
@@ -28,8 +38,11 @@ All feature branches maintain a complete copy of the `specs/` directory for cros
      git push origin "$branch"
    done
    ```
-3. **Return to your feature branch** and create the PR
+4. **Return to your feature branch** and create the PR
 
-This ensures all feature branches can reference the latest specs from all features, maintaining visibility across the project roadmap.
+### Why This Workflow?
+
+- **Merging from main first**: Ensures your feature includes any upstream changes, reducing merge conflicts later
+- **Spec synchronization**: All feature branches maintain a complete copy of the `specs/` directory for cross-reference, maintaining visibility across the project roadmap
 
 Thanks — maintainers will review PRs and request changes as needed.
