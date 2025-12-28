@@ -32,7 +32,7 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 	t.Run("error message is set on container action failure", func(t *testing.T) {
 		model := NewModel(nil, "test-project")
 		
-		// Simulate a container action failure
+		// Simulate a container action failure.
 		msg := containerActionResultMsg{
 			success: false,
 			message: "Failed to start container",
@@ -41,17 +41,17 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		
 		updatedModel, cmd := model.Update(msg)
 		
-		// Error message should be set
+		// Error message should be set.
 		if updatedModel.errorMsg == "" {
 			t.Error("Expected errorMsg to be set after container action failure")
 		}
 		
-		// Should contain user-friendly message
+		// Should contain user-friendly message.
 		if len(updatedModel.errorMsg) == 0 {
 			t.Error("Expected non-empty error message")
 		}
 		
-		// Timer command should be returned
+		// Timer command should be returned.
 		if cmd == nil {
 			t.Error("Expected timer command to be returned")
 		}
@@ -61,10 +61,10 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		model := NewModel(nil, "test-project")
 		model.errorMsg = "Some error message"
 		
-		// Simulate a key press
+		// Simulate a key press.
 		updatedModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
 		
-		// Error message should be cleared
+		// Error message should be cleared.
 		if updatedModel.errorMsg != "" {
 			t.Errorf("Expected errorMsg to be cleared after key press, got %q", updatedModel.errorMsg)
 		}
@@ -76,10 +76,10 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		model.errorMsg = "Some error message"
 		model.errorDisplayTime = displayTime
 		
-		// Simulate timer expiry message
+		// Simulate timer expiry message.
 		updatedModel, _ := model.Update(errorClearMsg{displayTime: displayTime})
 		
-		// Error message should be cleared
+		// Error message should be cleared.
 		if updatedModel.errorMsg != "" {
 			t.Errorf("Expected errorMsg to be cleared after timer expiry, got %q", updatedModel.errorMsg)
 		}
@@ -93,10 +93,10 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		model.errorMsg = "Some error message"
 		model.errorDisplayTime = displayTime2
 		
-		// Simulate timer expiry with old timestamp
+		// Simulate timer expiry with old timestamp.
 		updatedModel, _ := model.Update(errorClearMsg{displayTime: displayTime1})
 		
-		// Error message should NOT be cleared
+		// Error message should NOT be cleared.
 		if updatedModel.errorMsg == "" {
 			t.Error("Expected errorMsg to remain when timer timestamp doesn't match")
 		}
@@ -106,7 +106,7 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		model := NewModel(nil, "test-project")
 		model.errorMsg = "Some error message"
 		
-		// Simulate successful container action
+		// Simulate successful container action.
 		msg := containerActionResultMsg{
 			success: true,
 			message: "Container started successfully",
@@ -114,7 +114,7 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		
 		updatedModel, _ := model.Update(msg)
 		
-		// Error message should be cleared
+		// Error message should be cleared.
 		if updatedModel.errorMsg != "" {
 			t.Errorf("Expected errorMsg to be cleared on success, got %q", updatedModel.errorMsg)
 		}
@@ -123,7 +123,7 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 	t.Run("error is set on container list failure", func(t *testing.T) {
 		model := NewModel(nil, "test-project")
 		
-		// Simulate container list failure
+		// Simulate container list failure.
 		msg := containerListMsg{
 			containers: nil,
 			err:        errors.New("Cannot connect to the Docker daemon"),
@@ -131,12 +131,12 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		
 		updatedModel, cmd := model.Update(msg)
 		
-		// Error message should be set
+		// Error message should be set.
 		if updatedModel.errorMsg == "" {
 			t.Error("Expected errorMsg to be set after container list failure")
 		}
 		
-		// Timer command should be returned
+		// Timer command should be returned.
 		if cmd == nil {
 			t.Error("Expected timer command to be returned")
 		}
@@ -146,7 +146,7 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		model := NewModel(nil, "test-project")
 		model.errorMsg = "Some error message"
 		
-		// Simulate successful container list load
+		// Simulate successful container list load.
 		msg := containerListMsg{
 			containers: []docker.Container{
 				{ID: "abc123", Service: "web", Status: docker.StatusRunning},
@@ -156,7 +156,7 @@ func TestDashboardModel_ErrorDisplay(t *testing.T) {
 		
 		updatedModel, _ := model.Update(msg)
 		
-		// Error message should be cleared
+		// Error message should be cleared.
 		if updatedModel.errorMsg != "" {
 			t.Errorf("Expected errorMsg to be cleared on successful load, got %q", updatedModel.errorMsg)
 		}
