@@ -80,23 +80,23 @@
   > Use "●" for running, "○" for stopped, "✗" for error, "⚠" for warning
   > **📖 Reference**: See `/runbooks/research/lipgloss-styling-reference.md` - "Layout Patterns" section
   > Use lipgloss.Width() and Height() to measure before placing. See "3-Panel Layout" example.
-- [ ] T015 Create internal/docker/client.go with Client struct and NewClient() method per docker-api.md contract
-- [ ] T016 Implement Docker connection check in client.go (Ping method, error handling for daemon unreachable)
-- [ ] T017 [P] Create internal/app/messages.go with custom tea.Msg types: statsMsg, containerListMsg, logLineMsg, containerActionMsg, containerActionResultMsg per ui-events.md
+- [X] T015 Create internal/docker/client.go with Client struct and NewClient() method per docker-api.md contract
+- [X] T016 Implement Docker connection check in client.go (Ping method, error handling for daemon unreachable)
+- [X] T017 [P] Create internal/app/messages.go with custom tea.Msg types: statsMsg, containerListMsg, logLineMsg, containerActionMsg, containerActionResultMsg per ui-events.md
   > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md` - "Component Pattern" section for message type examples
   > Messages drive ALL state changes. Never mutate model directly.
-- [ ] T018 Create internal/app/root.go with RootModel struct (activeView, dashboard, help, projects, dockerClient fields)
+- [X] T018 Create internal/app/root.go with RootModel struct (activeView, dashboard, help, projects, dockerClient fields)
   > **📖 Reference**: See `/runbooks/research/bubbletea-component-guide.md` - "Root Model Pattern" section
   > Root model is a COORDINATOR - delegates messages to child components. See full example in guide.
-- [ ] T019 Implement RootModel.Init() method (initialize Docker client, return initial commands)
-- [ ] T020 Implement RootModel.Update() method with global shortcut routing (q=quit, ?=help, p=projects)
+- [X] T019 Implement RootModel.Init() method (initialize Docker client, return initial commands)
+- [X] T020 Implement RootModel.Update() method with global shortcut routing (q=quit, ?=help, p=projects)
   > **📖 Reference**: See `/runbooks/research/QUICK-REFERENCE.md` - "Common Update Pattern" section for switch statement template
   > Handle tea.KeyMsg for shortcuts, tea.WindowSizeMsg for responsive layout. NEVER block in Update()!
-- [ ] T021 Implement RootModel.View() method with modal overlay logic
-- [ ] T022 Update tui/main.go to create and run RootModel instead of hello world
-- [ ] T023 [P] [TEST] Create internal/docker/client_test.go with table-driven tests for Docker connection (success, daemon unreachable, permission denied)
-- [ ] T024 [P] [TEST] Create internal/app/root_test.go with unit tests for RootModel Init/Update/View (test global shortcuts, view routing)
-- [ ] T025 [TEST] Run `make test` to verify foundational tests pass
+- [X] T021 Implement RootModel.View() method with modal overlay logic
+- [X] T022 Update tui/main.go to create and run RootModel instead of hello world
+- [X] T023 [P] [TEST] Create internal/docker/client_test.go with table-driven tests for Docker connection (success, daemon unreachable, permission denied)
+- [X] T024 [P] [TEST] Create internal/app/root_test.go with unit tests for RootModel Init/Update/View (test global shortcuts, view routing)
+- [X] T025 [TEST] Run `make test` to verify foundational tests pass
 
 **Checkpoint**: Foundation ready - Docker client connects, root model routes messages, test coverage >80%
 

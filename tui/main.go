@@ -6,41 +6,26 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/peternicholls/20i-stack/tui/internal/app"
 )
 
-type model struct {
-	quitting bool
-}
-
-func (m model) Init() tea.Cmd {
-	return nil
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			m.quitting = true
-			return m, tea.Quit
-		}
-	}
-	return m, nil
-}
-
-func (m model) View() string {
-	if m.quitting {
-		return "Goodbye!\n"
-	}
-	return "Hello, 20i Stack Manager! Press 'q' to quit.\n"
-}
-
 func main() {
-	p := tea.NewProgram(model{})
+	ctx := context.Background()
+
+	// Create RootModel with Docker client
+	rootModel, err := app.NewRootModel(ctx)
+	if err != nil {
+		fmt.Printf("Error initializing TUI: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create and run the Bubble Tea program
+	p := tea.NewProgram(rootModel)
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
