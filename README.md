@@ -21,7 +21,7 @@ docker, docker-compose, php, php-fpm, nginx, mariadb, phpmyadmin, apple-silicon,
 
 ## Quick Start
 
-### TUI Manager (Recommended - In Development)
+### TUI Manager (Recommended - Phase 3a Available)
 ```bash
 # Navigate to your web project first
 cd /path/to/your/website
@@ -35,15 +35,23 @@ make build
 ./bin/20i-stack-manager
 ```
 
-**TUI Workflow** (Project-Aware Stack Management):
-- 📂 **Current Project**: Displays the directory you're working in (left panel)
-- ✅ **Pre-flight Checks**: Validates `public_html/` folder, offers template installation
-- 🚀 **Stack Operations**: Start/stop/restart entire stack for current project
-- 📊 **Live Metrics**: Real-time container status, ports, CPU, memory (like Docker Desktop)
-- 📁 **Code Mounting**: Auto-mounts current directory as `CODE_DIR`
-- ⌨️ **Keyboard Navigation**: Full keyboard-driven interface
-- 🎨 **Three-Panel Layout**: Project info (left) + Stack status (right) + Commands (bottom)
-- 🔮 **Future**: Multi-project browser to manage multiple sites
+**Phase 3a Features** (Container Management MVP):
+- 📊 **Dashboard View**: Two-panel layout showing containers and status
+- ⌨️ **Keyboard Navigation**: Navigate with `↑/↓` or `j/k`, operate with `s`/`r`
+- 🖱️ **Mouse Support**: Click to select, scroll to navigate
+- 🎮 **Container Operations**: Start/stop/restart individual containers
+- ❓ **Help Modal**: Press `?` for command reference
+- 🎨 **Modern UI**: Lipgloss-styled terminal interface
+- 🔧 **Error Handling**: User-friendly error messages with recovery hints
+- 📚 **Documentation**: Complete [user guide](docs/tui/user-guide.md) and [troubleshooting](docs/tui/troubleshooting.md)
+
+**Coming in Phase 3b/4**:
+- 🚀 Stack-level operations (start/stop entire stack)
+- 📊 Resource metrics (CPU%, memory)
+- 📁 Multi-project browser
+- ✅ Pre-flight checks and template installation
+
+See [docs/tui/user-guide.md](docs/tui/user-guide.md) for complete documentation.
 
 ### Shell Commands (Classic GUI)
 ```bash

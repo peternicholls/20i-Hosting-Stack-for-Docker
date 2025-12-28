@@ -20,10 +20,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Added - Phase 3a TUI Features
+- **Terminal UI (TUI)** - Modern keyboard-driven interface for stack management
+- **Container Management** - Start/stop/restart individual containers via keyboard
+- **Dashboard View** - Two-panel layout with service list and status information
+- **Help Modal** - Press `?` to see all available commands
+- **Mouse Support** - Full mouse interaction support (click, scroll)
+- **Keyboard Navigation** - Vim-style (`j/k`) and arrow key navigation
+- **Error Handling** - User-friendly Docker error messages with recovery hints
+- **Documentation** - Complete user guide, troubleshooting, and architecture docs
+- **Integration Tests** - CI-safe test suite with Docker mocking
 - Automated release workflow with release-please
 - Release validation scripts (version.sh, validate.sh)
 - Release artifact packaging and distribution
+
+### Documentation
+- `/docs/tui/user-guide.md` - Complete TUI usage guide
+- `/docs/tui/troubleshooting.md` - Common issues and solutions
+- `/docs/tui/architecture.md` - Technical design and patterns
+- Updated `tui/README.md` with Phase 3a features
+- Updated main `README.md` with TUI quick start
 
 ## [1.0.0] - 2025-12-28
 

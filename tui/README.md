@@ -96,31 +96,51 @@ gofmt -w internal/ && go vet ./...
 
 ### Current Implementation Status
 
-✅ **UI Framework** - Bubble Tea model working with responsive layout  
-✅ **Container Operations** - Start/stop/restart individual containers working  
-✅ **Keyboard Navigation** - `↑/↓` or `j/k` navigation implemented  
-⚠️ **Project Browser** - **NOT YET IMPLEMENTED** (needs directory listing)  
-⚠️ **Pre-flight Checks** - **NOT YET IMPLEMENTED** (public_html/ validation)  
-⚠️ **Template Installation** - **NOT YET IMPLEMENTED**  
-⚠️ **Stack Lifecycle** - **NOT YET IMPLEMENTED** (compose up/down for projects)  
-⚠️ **Three-Panel Layout** - **NOT YET IMPLEMENTED** (currently two-panel)  
-⚠️ **Resource Metrics** - **NOT YET IMPLEMENTED** (CPU/memory stats)  
+✅ **Phase 3a Complete - Container Management MVP**:
+- **UI Framework** - Bubble Tea model working with responsive layout
+- **Container Operations** - Start/stop/restart individual containers
+- **Keyboard Navigation** - `↑/↓` or `j/k` navigation
+- **Mouse Support** - Full mouse interaction (click, scroll)
+- **Help Modal** - Press `?` for command reference
+- **Error Handling** - User-friendly Docker error messages
+- **Documentation** - Complete user guide, troubleshooting, architecture docs
+- **Integration Tests** - CI-safe test suite with Docker mocking
 
-### Keyboard Controls (Planned)
+⚠️ **Phase 3b Planned** (Stack Operations):
+- Stack-level operations (start/stop/restart entire stack)
+- Resource metrics (CPU%, memory stats)
+- Stack destruction with volume removal
+- Live compose output streaming
+- `.20i-local` configuration editing
+
+⚠️ **Phase 4 Planned** (Multi-Project):
+- Project browser and listing
+- Project switching
+- Multiple stack management
+- Project creation workflow  
+
+### Keyboard Controls
 
 | Key | Action |
 |-----|--------|
 | `↑` / `k` | Move selection up (service list) |
 | `↓` / `j` | Move selection down (service list) |
-| `S` | **Start stack** for current project |
-| `T` | **Stop stack** for current project |
-| `R` | **Restart stack** for current project |
-| `s` | Start individual selected service |
-| `t` | Stop individual selected service |
-| `r` | Restart individual selected service |
+| `s` | Start/Stop selected container (toggle) |
+| `r` | Restart selected container |
+| `?` | Show help modal |
 | `q` / `ctrl+c` | Quit application |
+| `p` | Projects view (Phase 4) |
+| `Esc` | Return to dashboard |
 
-**Note**: Current implementation only supports individual container actions. Stack-level operations are planned.
+**Mouse Support**:
+- Click to select containers
+- Scroll to navigate lists
+
+**Phase 3b (Coming Soon)**:
+- `S` - Start entire stack
+- `T` - Stop entire stack  
+- `R` - Restart entire stack
+- `D` - Destroy stack (with confirmation)
 
 ### Planned (Future Phases)
 

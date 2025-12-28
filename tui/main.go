@@ -24,8 +24,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create and run the Bubble Tea program
-	p := tea.NewProgram(rootModel)
+	// Create and run the Bubble Tea program with mouse support
+	p := tea.NewProgram(
+		rootModel,
+		tea.WithMouseCellMotion(),
+		tea.WithMouseAllMotion(),
+	)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
