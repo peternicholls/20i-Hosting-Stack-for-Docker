@@ -97,8 +97,8 @@ func TestGetPhpMyAdminImage_ArchitectureSpecific(t *testing.T) {
 
 	// Verify the result is one of the expected values
 	validImages := map[string]bool{
-		"arm64v8/phpmyadmin:latest":      true,
-		"phpmyadmin/phpmyadmin:latest":   true,
+		"arm64v8/phpmyadmin:latest":    true,
+		"phpmyadmin/phpmyadmin:latest": true,
 	}
 
 	if !validImages[result] {

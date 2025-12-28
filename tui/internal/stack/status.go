@@ -23,13 +23,13 @@ import (
 
 // ContainerInfo holds runtime information about a container in the stack.
 type ContainerInfo struct {
-	ID       string  // Container ID
-	Name     string  // Container name
-	Service  string  // Service name from compose label
-	Image    string  // Image name
-	Status   string  // Container status (running, stopped, etc.)
-	URL      string  // Access URL (if applicable)
-	CPUPerc  float64 // CPU usage percentage
+	ID      string  // Container ID
+	Name    string  // Container name
+	Service string  // Service name from compose label
+	Image   string  // Image name
+	Status  string  // Container status (running, stopped, etc.)
+	URL     string  // Access URL (if applicable)
+	CPUPerc float64 // CPU usage percentage
 }
 
 // GetStackStatus retrieves the status of all containers in a Docker Compose stack.
@@ -197,7 +197,7 @@ func calculateCPUPercent(stats *container.StatsResponse) float64 {
 
 	// Calculate the change in CPU usage
 	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
-	
+
 	// Calculate the change in system CPU usage
 	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
 
