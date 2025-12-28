@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1](https://github.com/peternicholls/20i-Hosting-Stack-for-Docker/compare/v1.0.0...v1.0.1) (2025-12-28)
+
+
+### Bug Fixes
+
+* update release badge to use correct repository name ([a082858](https://github.com/peternicholls/20i-Hosting-Stack-for-Docker/commit/a082858fd4e2d25fc4dee9190f979825cca0270c))
+
 ## 1.0.0 (2025-12-28)
 
 
