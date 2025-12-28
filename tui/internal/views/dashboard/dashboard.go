@@ -9,6 +9,7 @@ package dashboard
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -18,14 +19,16 @@ import (
 
 // Model represents the dashboard view state for Phase 3.
 type Model struct {
-	containers    []docker.Container
-	selectedIndex int
-	projectName   string
-	dockerClient  *docker.Client
-	width         int
-	height        int
-	lastError     error
-	lastStatusMsg string
+	containers       []docker.Container
+	selectedIndex    int
+	projectName      string
+	dockerClient     *docker.Client
+	width            int
+	height           int
+	lastError        error
+	lastStatusMsg    string
+	refreshActive    bool // Whether auto-refresh timer is active
+	refreshCancelCmd tea.Cmd // Command to cancel the refresh timer
 }
 
 // NewModel creates a dashboard model with required dependencies.
@@ -52,6 +55,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Cancel refresh timer when switching views
+		switch msg.String() {
+		case "esc", "?", "p":
+			m.refreshActive = false
+			return m, nil
+		}
+
 		// Navigation keys (T051)
 		switch msg.String() {
 		case "up", "k":
@@ -107,6 +117,43 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.selectedIndex = clampIndex(len(m.containers) - 1)
 		}
 		m.lastError = nil
+
+		// Start refresh timer if we have containers and timer not already active
+		if len(m.containers) > 0 && !m.refreshActive {
+			m.refreshActive = true
+			return m, startRefreshTimerCmd()
+		}
+		return m, nil
+
+	case refreshTickMsg:
+		// Auto-refresh timer tick - fetch updated status
+		if m.refreshActive && len(m.containers) > 0 {
+			return m, tea.Batch(
+				refreshContainersCmd(m.dockerClient, m.projectName),
+				startRefreshTimerCmd(), // Schedule next tick
+			)
+		}
+		return m, nil
+
+	case stackContainersMsg:
+		// Handle refreshed container data
+		if msg.err != nil {
+			m.lastError = msg.err
+			// Don't stop refresh timer on error - keep trying
+			return m, nil
+		}
+
+		m.containers = msg.containers
+		if m.selectedIndex >= len(m.containers) {
+			m.selectedIndex = clampIndex(len(m.containers) - 1)
+		}
+		m.lastError = nil
+
+		// Stop refresh timer if no containers (stack stopped)
+		if len(m.containers) == 0 {
+			m.refreshActive = false
+		}
+		return m, nil
 	}
 
 	return m, nil
@@ -282,4 +329,28 @@ func formatDockerError(err error, action, containerName string) string {
 
 	// Generic fallback
 	return fmt.Sprintf("❌ Failed to %s '%s': %s", action, containerName, err)
+}
+
+// refreshTickMsg is sent every 5 seconds to trigger a status refresh
+type refreshTickMsg struct{}
+
+// stackContainersMsg is sent when container status is refreshed
+type stackContainersMsg struct {
+	containers []docker.Container
+	err        error
+}
+
+// startRefreshTimerCmd starts the 5-second refresh timer
+func startRefreshTimerCmd() tea.Cmd {
+	return tea.Tick(5*time.Second, func(time.Time) tea.Msg {
+		return refreshTickMsg{}
+	})
+}
+
+// refreshContainersCmd fetches updated container status with CPU stats
+func refreshContainersCmd(client *docker.Client, projectName string) tea.Cmd {
+	return func() tea.Msg {
+		containers, err := client.ListContainersWithStats(projectName)
+		return stackContainersMsg{containers: containers, err: err}
+	}
 }

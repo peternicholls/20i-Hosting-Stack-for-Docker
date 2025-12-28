@@ -8,6 +8,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -57,12 +58,13 @@ const (
 // Container represents a Docker container for Phase 3 lifecycle operations.
 // Extended in Phase 5 with Ports, CreatedAt, StartedAt.
 type Container struct {
-	ID      string
-	Name    string
-	Service string
-	Image   string
-	Status  ContainerStatus
-	State   string
+	ID         string
+	Name       string
+	Service    string
+	Image      string
+	Status     ContainerStatus
+	State      string
+	CPUPercent float64 // CPU usage percentage (0-100)
 }
 
 type dockerAPI interface {
@@ -71,6 +73,7 @@ type dockerAPI interface {
 	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
 	ContainerRestart(ctx context.Context, containerID string, options container.StopOptions) error
+	ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error)
 }
 
 // Client is a thin wrapper around the official Docker SDK client
@@ -133,16 +136,40 @@ func (c *Client) ListContainers(projectName string) ([]Container, error) {
 	results := make([]Container, 0, len(containers))
 	for _, summary := range containers {
 		results = append(results, Container{
-			ID:      summary.ID,
-			Name:    containerName(summary.Names),
-			Service: containerService(summary),
-			Image:   summary.Image,
-			Status:  mapDockerState(string(summary.State)),
-			State:   summary.Status,
+			ID:         summary.ID,
+			Name:       containerName(summary.Names),
+			Service:    containerService(summary),
+			Image:      summary.Image,
+			Status:     mapDockerState(string(summary.State)),
+			State:      summary.Status,
+			CPUPercent: 0, // CPU not fetched in basic listing
 		})
 	}
 
 	return results, nil
+}
+
+// ListContainersWithStats returns all containers with CPU statistics for the provided Docker Compose project.
+// This method is used for auto-refresh to get updated status and CPU usage.
+func (c *Client) ListContainersWithStats(projectName string) ([]Container, error) {
+	// First, get the basic container list
+	containers, err := c.ListContainers(projectName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Then fetch CPU stats for running containers
+	for i := range containers {
+		if containers[i].Status == StatusRunning {
+			cpuPercent, err := c.GetContainerStats(containers[i].ID)
+			if err == nil {
+				containers[i].CPUPercent = cpuPercent
+			}
+			// Ignore errors for individual stats - continue with 0% CPU
+		}
+	}
+
+	return containers, nil
 }
 
 // StartContainer starts a stopped container by ID.
@@ -181,6 +208,28 @@ func (c *Client) RestartContainer(containerID string, timeout int) error {
 	}
 
 	return nil
+}
+
+// GetContainerStats retrieves CPU usage for a container using one-shot stats API.
+// Returns CPU percentage (0-100) or 0 if stats unavailable.
+func (c *Client) GetContainerStats(containerID string) (float64, error) {
+	statsCtx, cancel := context.WithTimeout(c.ctx, 3*time.Second)
+	defer cancel()
+
+	resp, err := c.cli.ContainerStats(statsCtx, containerID, false) // stream=false for one-shot
+	if err != nil {
+		return 0, mapOperationError(err)
+	}
+	defer resp.Body.Close()
+
+	var stats container.StatsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
+		return 0, fmt.Errorf("failed to decode stats: %w", err)
+	}
+
+	// Calculate CPU percentage
+	cpuPercent := calculateCPUPercent(&stats)
+	return cpuPercent, nil
 }
 
 // ComposeStop stops all containers in a Docker Compose project.
@@ -335,4 +384,21 @@ func containerService(summary container.Summary) string {
 	}
 
 	return summary.ID
+}
+
+// calculateCPUPercent computes CPU usage percentage from Docker stats.
+// Formula: ((CPUDelta / SystemCPUDelta) * NumCPUs) * 100
+func calculateCPUPercent(stats *container.StatsResponse) float64 {
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
+
+	if systemDelta > 0 && cpuDelta > 0 {
+		numCPUs := float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
+		if numCPUs == 0 {
+			numCPUs = 1 // Fallback to 1 CPU if not available
+		}
+		return (cpuDelta / systemDelta) * numCPUs * 100.0
+	}
+
+	return 0
 }

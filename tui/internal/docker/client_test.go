@@ -56,6 +56,11 @@ func (f *fakeDockerClient) ContainerRestart(ctx context.Context, containerID str
 	return f.restartErr
 }
 
+func (f *fakeDockerClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
+	// Return nil for now - stats not tested in existing tests
+	return container.StatsResponseReader{}, nil
+}
+
 func TestMapConnectionError(t *testing.T) {
 	cases := []struct {
 		name string

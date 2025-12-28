@@ -118,3 +118,9 @@ type StackStatusMsg struct {
 	Message   string // Human-readable status message
 	Error     error  // Error if operation failed
 }
+
+// StackContainersMsg sent when container status is refreshed (auto-refresh)
+type StackContainersMsg struct {
+	Containers []interface{} // List of containers with updated status
+	Error      error         // Error if refresh failed
+}
