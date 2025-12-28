@@ -1,0 +1,56 @@
+name: Changelog Preview
+
+on:
+    pull_request:
+        branches:
+            - main
+        types: [opened, synchronize]
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    preview:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Make scripts executable
+              run: chmod +x scripts/release/changelog-preview.sh
+
+            - name: Generate changelog preview
+              id: preview
+              run: |
+                  {
+                    echo 'preview<<EOF'
+                    scripts/release/changelog-preview.sh
+                    echo 'EOF'
+                  } >> "$GITHUB_OUTPUT"
+
+            - name: Find existing comment
+              uses: peter-evans/find-comment@v3
+              id: find-comment
+              with:
+                  issue-number: ${{ github.event.pull_request.number }}
+                  comment-author: "github-actions[bot]"
+                  body-includes: "📋 Changelog Preview"
+
+            - name: Create or update comment
+              uses: peter-evans/create-or-update-comment@v4
+              with:
+                  comment-id: ${{ steps.find-comment.outputs.comment-id }}
+                  issue-number: ${{ github.event.pull_request.number }}
+                  edit-mode: replace
+                  body: |
+                      ## 📋 Changelog Preview
+
+                      This shows what will be added to the CHANGELOG when this PR is merged.
+
+                      ${{ steps.preview.outputs.preview }}
+
+                      ---
+                      *This preview is automatically generated from conventional commit messages.*
