@@ -9,23 +9,27 @@ package dashboard
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/peternicholls/20i-stack/tui/internal/docker"
+	"github.com/peternicholls/20i-stack/tui/internal/stack"
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
 )
 
 // Model represents the dashboard view state for Phase 3.
 type Model struct {
-	containers    []docker.Container
-	selectedIndex int
-	projectName   string
-	dockerClient  *docker.Client
-	width         int
-	height        int
-	lastError     error
-	lastStatusMsg string
+	containers       []docker.Container
+	selectedIndex    int
+	projectName      string
+	dockerClient     *docker.Client
+	width            int
+	height           int
+	lastError        error
+	lastStatusMsg    string
+	errorMsg         string // Formatted user-friendly error message
+	errorDisplayTime time.Time
 }
 
 // NewModel creates a dashboard model with required dependencies.
@@ -52,6 +56,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Clear error on any key press (user action)
+		m.errorMsg = ""
+
 		// Navigation keys (T051)
 		switch msg.String() {
 		case "up", "k":
@@ -87,19 +94,37 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		}
 
+	case errorClearMsg:
+		// Timer expired - clear error if it matches the timestamp
+		if msg.displayTime == m.errorDisplayTime {
+			m.errorMsg = ""
+		}
+		return m, nil
+
 	case containerActionResultMsg:
 		// Handle action results (T061)
 		m.lastStatusMsg = msg.message
 		if msg.success {
+			// Clear any error on success
+			m.errorMsg = ""
 			// Refresh container list after successful action
 			return m, loadContainersCmd(m.dockerClient, m.projectName)
+		}
+		// On error, set formatted error message and start timer
+		if msg.err != nil {
+			m.errorMsg = stack.FormatUserError(msg.err)
+			m.errorDisplayTime = time.Now()
+			return m, errorClearCmd(m.errorDisplayTime)
 		}
 		return m, nil
 
 	case containerListMsg:
 		if msg.err != nil {
 			m.lastError = msg.err
-			return m, nil
+			// Set formatted error message and start timer
+			m.errorMsg = stack.FormatUserError(msg.err)
+			m.errorDisplayTime = time.Now()
+			return m, errorClearCmd(m.errorDisplayTime)
 		}
 
 		m.containers = msg.containers
@@ -107,6 +132,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.selectedIndex = clampIndex(len(m.containers) - 1)
 		}
 		m.lastError = nil
+		// Clear error on successful container list load
+		m.errorMsg = ""
 	}
 
 	return m, nil
@@ -151,9 +178,14 @@ func (m Model) View() string {
 func (m Model) renderStatusPanel(width, height int) string {
 	var content string
 
-	if m.lastError != nil {
-		// Show error message
-		content = "❌ Error: " + m.lastError.Error()
+	// Priority 1: Show formatted error message with red styling
+	if m.errorMsg != "" {
+		errorStyle := lipgloss.NewStyle().Foreground(ui.ColorError).Bold(true)
+		content = errorStyle.Render("❌ " + m.errorMsg)
+	} else if m.lastError != nil {
+		// Fallback for any errors not yet using the new format
+		errorStyle := lipgloss.NewStyle().Foreground(ui.ColorError).Bold(true)
+		content = errorStyle.Render("❌ " + m.lastError.Error())
 	} else if len(m.containers) == 0 {
 		// No containers loaded yet
 		content = "ℹ Loading containers..."
@@ -282,4 +314,17 @@ func formatDockerError(err error, action, containerName string) string {
 
 	// Generic fallback
 	return fmt.Sprintf("❌ Failed to %s '%s': %s", action, containerName, err)
+}
+
+// errorClearMsg is sent after the error display timeout to clear the error message.
+type errorClearMsg struct {
+	displayTime time.Time
+}
+
+// errorClearCmd creates a tea.Cmd that waits 5 seconds and then sends an errorClearMsg.
+// The displayTime is used to ensure we only clear the error that was displayed at that time.
+func errorClearCmd(displayTime time.Time) tea.Cmd {
+	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return errorClearMsg{displayTime: displayTime}
+	})
 }
