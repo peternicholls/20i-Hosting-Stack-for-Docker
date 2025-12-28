@@ -13,26 +13,36 @@
 
 A professional terminal user interface (TUI) built with Bubble Tea framework to replace and enhance the existing 20i-gui bash script. This MVP replicates all 20i-gui functionality (start/stop/restart/status/logs/destroy) with a modern, keyboard-driven interface following best practices from lazydocker, lazygit, k9s, and gh-dash.
 
-**Phase 1 Scope** (MVP - this spec):
-- **CORE BASELINE** (replicates 20i-gui):
-  - Container lifecycle operations (start, stop, restart, remove) - **PRIORITY 1**
-  - Service list view with status indicators
+**Core Concept**: The TUI is a **project-aware web stack manager**, not a generic Docker container viewer. Users run it from their web project directory, and it manages the 20i stack for THAT project.
+
+**Phase 3a Scope** (MVP - this spec):
+- **PROJECT-AWARE STACK MANAGEMENT** (replicates 20i-gui):
+  - Detect current directory as web project root
+  - Validate `public_html/` folder exists (pre-flight check)
+  - Offer template installation from `demo-site-folder/` if missing
+  - Start/stop/restart stack for current project (`docker compose up/down`)
+  - Set environment variables (`CODE_DIR`, `COMPOSE_PROJECT_NAME`)
+  - Display stack status table with URLs, ports, CPU%
   - Stack destruction with confirmation - **PRIORITY 2**
   
-- **ENHANCEMENTS** (beyond 20i-gui):
-  - Real-time CPU/memory monitoring dashboard
-  - Log viewer with follow mode
-  - Project selection and switching
+- **THREE-PANEL LAYOUT**:
+  - Left panel: Project info (name, path, stack status)
+  - Right panel: Dynamic view (pre-flight → compose output → status table)
+  - Bottom panel: Commands and status messages
 
-**Implementation Order**: Lifecycle first (get stacks running), then destroy (complete baseline), then monitoring/logs (enhancements)
+**Phase 3b** (Container Lifecycle - after 3a):
+  - Individual container start/stop/restart (for debugging)
+  - Real-time CPU/memory monitoring per container
+  - Container detail panel
 
-**Phase 2+** (future specs):
+**Phase 4+** (future specs):
+- Multi-project browser (list all projects, switch between them)
+- Log viewer with follow mode
+- Project selection and switching
 - Configuration editor (replaces manual .20i-local editing)
-- Image management (pull, remove, list)
-- Advanced monitoring with graphs
-- Custom commands and plugins
 
 **Design Principles** (from research):
+- **Project-first** - TUI operates on web project directories, not generic Docker containers
 - **Panel-based layout** (not tabs) - see multiple contexts simultaneously
 - **Component composition** - each view is a standalone Bubble Tea model
 - **Keyboard-first** - vim bindings + arrow keys, max 3 keystrokes to any action
@@ -44,66 +54,69 @@ A professional terminal user interface (TUI) built with Bubble Tea framework to 
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Dashboard Overview (Priority: P1 - Enhancement)
+### User Story 0 - Project Detection & Pre-flight (Priority: P0 - Core) 🎯 MVP FIRST
 
-**Replaces**: N/A (Enhancement beyond 20i-gui baseline)
+**Replaces**: 20i-gui project directory detection + public_html validation
 
-As a developer, I want to see an at-a-glance dashboard of all 20i stack services with live CPU and memory monitoring so that I can assess stack health without running separate monitoring tools.
+As a developer, I want the TUI to detect my current directory as a web project and validate that `public_html/` exists, so that I can ensure my project is ready to run before starting the stack.
 
-**Why this priority**: Enhanced monitoring feature. The baseline TUI (US2 Lifecycle + US4 Destroy) provides status verification. This adds performance metrics for power users.
+**Why this priority**: This is the ENTRY POINT - the TUI must understand the project context before any stack operations. Without this, we're just a generic Docker viewer.
 
-**Independent Test**: After lifecycle MVP working, start TUI, verify services show with CPU bars and memory usage updating every 2s.
+**Independent Test**: Run TUI from `~/my-website/`, verify left panel shows project name and path, right panel shows pre-flight status (public_html exists or missing).
 
 **Acceptance Scenarios**:
 
-1. **Given** a running 20i stack, **When** the TUI opens, **Then** the dashboard shows all 4 services (apache, mariadb, nginx, phpmyadmin) with color-coded status
-2. **Given** containers are running, **When** viewing the dashboard, **Then** CPU and memory metrics update every 2s without blocking user input
-3. **Given** a stopped container, **When** viewing the dashboard, **Then** it shows gray/dim with "Stopped" label
-4. **Given** the dashboard, **When** I select a service and press Enter, **Then** the detail panel shows ports, image, uptime, container ID
+1. **Given** a directory with `public_html/`, **When** I launch the TUI, **Then** left panel shows "✅ my-website" with path, right panel shows "Ready to start stack"
+2. **Given** a directory WITHOUT `public_html/`, **When** I launch the TUI, **Then** left panel shows "⚠️ my-website", right panel shows "Missing public_html/" with option to create from template
+3. **Given** missing `public_html/`, **When** I press `T` (create template), **Then** `public_html/` is created from `demo-site-folder/` template
+4. **Given** the TUI, **When** viewing left panel, **Then** it shows: project name, directory path, stack status (Not Running / Running / Starting)
+5. **Given** a non-project directory (no `public_html/` possible), **When** I launch TUI, **Then** show clear error with instructions
 
 ---
 
-### User Story 2 - Container Lifecycle (Priority: P0 - Core) 🎯 MVP
+### User Story 1 - Stack Lifecycle (Priority: P0 - Core) 🎯 MVP
 
 **Replaces**: 20i-gui "Start Stack", "Stop Stack", "Restart Stack" commands
 
-As a developer, I want to start, stop, restart individual services or the entire stack so that I can control my development environment without leaving the TUI - **THIS IS THE PRIMARY USE CASE**.
+As a developer, I want to start, stop, and restart the entire 20i stack for my current project so that I can control my development environment with proper `CODE_DIR` mounting.
 
-**Why this priority**: Lifecycle management is the core baseline - getting stacks running and verified. This matches 20i-gui menu options 1-3 and must work FIRST before adding monitoring enhancements.
+**Why this priority**: Stack lifecycle is the PRIMARY use case - getting the web project running with proper environment variables. This is what 20i-gui does.
 
-**Independent Test**: Select apache service, press `s` to stop, verify status changes to gray "Stopped"; press `s` again, verify starts and turns green.
-
-**Acceptance Scenarios**:
-
-1. **Given** the dashboard with apache running, **When** I press `s`, **Then** apache container stops and status updates to "Stopped" with gray color
-2. **Given** apache stopped, **When** I press `s`, **Then** it starts and status shows "Running" with green color
-3. **Given** any service selected, **When** I press `r`, **Then** the container restarts (stop + start) with "Restarting..." feedback
-4. **Given** the dashboard, **When** I press `S` (shift-s), **Then** all stack containers stop with confirmation prompt
-5. **Given** the dashboard, **When** I press `R` (shift-r), **Then** entire stack restarts (docker compose restart)
-
----
-
-### User Story 3 - Log Viewer (Priority: P0 - Core)
-
-**Replaces**: 20i-gui "View Logs" command
-
-As a developer, I want to view live container logs with follow mode so that I can debug issues in real-time without running `docker compose logs -f`.
-
-**Why this priority**: Log viewing is critical for debugging - one of the 6 core 20i-gui commands.
-
-**Independent Test**: Select apache, press `l`, verify logs panel opens showing last 100 lines; press `f` to enable follow, make web request, verify new log line appears.
+**Independent Test**: Press `S` to start stack, verify compose output streams in right panel, then status table appears showing all 4 services with URLs.
 
 **Acceptance Scenarios**:
 
-1. **Given** the dashboard with apache selected, **When** I press `l`, **Then** the bottom panel shows last 100 lines of apache logs
-2. **Given** the log viewer open, **When** I press `f`, **Then** follow mode enables and new log entries auto-scroll
-3. **Given** follow mode enabled, **When** new log lines appear, **Then** viewport auto-scrolls to bottom
-4. **Given** the log viewer, **When** I press `Esc` or `q`, **Then** log panel closes and returns to dashboard
-5. **Given** the log viewer, **When** I press `/`, **Then** a search input appears and filters logs as I type
+1. **Given** a project with `public_html/` and stack NOT running, **When** I press `S`, **Then** `docker compose up -d` runs with `CODE_DIR=$(pwd)` and `COMPOSE_PROJECT_NAME={project-name}`
+2. **Given** stack starting, **When** compose runs, **Then** right panel shows live compose output (pulling images, starting containers)
+3. **Given** stack running, **When** compose completes, **Then** right panel shows status table: container names, status, image, URLs, CPU%
+4. **Given** stack running, **When** I press `T` (stop), **Then** `docker compose down` runs and stack status updates to "Not Running"
+5. **Given** stack running, **When** I press `R`, **Then** `docker compose restart` runs with feedback
 
 ---
 
-### User Story 4 - Destroy Stack (Priority: P0 - Core)
+### User Story 2 - Stack Status Table (Priority: P0 - Core)
+
+**Replaces**: 20i-gui status view + Docker Desktop container table
+
+As a developer, I want to see a status table of all running stack services with URLs and resource usage so I can access my site and monitor health.
+
+**Why this priority**: After starting the stack, users need to know the access URLs and verify services are healthy.
+
+**Independent Test**: Start stack, verify table shows: nginx (http://localhost:80), apache, mariadb (localhost:3306), phpmyadmin (http://localhost:8081), with CPU% bars.
+
+**Acceptance Scenarios**:
+
+1. **Given** stack running, **When** viewing status table, **Then** shows: Service Name, Status (●/○), Image, URL/Port, CPU%
+2. **Given** nginx service, **When** in table, **Then** URL shows `http://localhost:{HOST_PORT}` (clickable)
+3. **Given** nginx URL, **When** I click it with mouse, **Then** URL opens in default web browser
+4. **Given** phpmyadmin service, **When** in table, **Then** URL shows `http://localhost:{PMA_PORT}` (clickable)
+5. **Given** mariadb service, **When** in table, **Then** Port shows `localhost:{MYSQL_PORT}` (not clickable)
+6. **Given** any service, **When** viewing CPU%, **Then** shows block graph (▓░░░░░░░░░) with percentage
+7. **Given** any URL in table, **When** I hover over it, **Then** text style indicates clickability (underlined/highlighted)
+
+---
+
+### User Story 3 - Destroy Stack (Priority: P0 - Core)
 
 **Replaces**: 20i-gui "Destroy Stack" command (menu option 6)
 
@@ -115,45 +128,32 @@ As a developer, I want to destroy a stack (stop containers + remove volumes) so 
 
 **Acceptance Scenarios**:
 
-1. **Given** the dashboard with running stack, **When** I press `D` (shift-d), **Then** a confirmation modal appears with warning about data loss
-2. **Given** the destroy confirmation, **When** I type "yes", **Then** `docker compose down -v` runs and all containers + volumes are removed
-3. **Given** the destroy confirmation, **When** I press `Esc` or type anything else, **Then** operation cancels and modal closes
-4. **Given** stack destroyed, **When** operation completes, **Then** success message shows and dashboard updates to show no running containers
+1. **Given** stack running, **When** I press `D` (shift-d), **Then** first confirmation modal appears: "⚠️ Destroy stack? Type 'yes' to continue"
+2. **Given** first confirmation, **When** I type "yes", **Then** second confirmation modal appears: "🔴 Are you SURE? Type 'destroy' to confirm (Step 2/2)"
+3. **Given** second confirmation, **When** I type "destroy", **Then** `docker compose down -v` runs and all containers + volumes are removed
+4. **Given** any confirmation stage, **When** I press `Esc`, **Then** operation cancels and all modals close
+5. **Given** any confirmation stage, **When** I type incorrect text, **Then** error hint shows and modal remains open
+6. **Given** stack destroyed, **When** operation completes, **Then** right panel shows "Stack destroyed" and status updates to "Not Running"
 
 ---
 
-### User Story 5 - Project Switcher (Priority: P1 - Important)
+### Deferred Stories (Phase 3b and Phase 4+)
 
-**Replaces**: 20i-gui multi-project selection (shown when stopping/viewing logs)
+These features are intentionally excluded from Phase 3a MVP:
 
-As a developer, I want to see all detected 20i projects and switch between them so that I can manage multiple projects from one TUI instance.
+**Phase 3b - Container Lifecycle** (after project-aware MVP):
+- **Individual Container Actions**: Start/stop/restart individual services (s/r keys)
+- **Container Navigation**: Navigate service list with j/k keys
+- **Container Detail Panel**: Show selected container's ports, image, uptime, volumes
 
-**Why this priority**: Power users have multiple projects - 20i-gui already supports this via project selection prompts.
+**Phase 4+ - Multi-Project & Advanced Features**:
+- **Project Switcher**: List all web projects, switch between them (p key)
+- **Log Viewer**: View live container logs with follow mode (l key)
+- **Configuration Editor**: Edit .20i-local, .env, stack-vars.yml files in TUI
+- **phpMyAdmin Architecture Selection**: Choose ARM vs x86 image
+- **Custom Port Selection**: Interactive port picker like 20i-gui
 
-**Independent Test**: Press `:projects` or `p`, verify list shows current directory and other projects with docker-compose.yml, select different project, verify dashboard switches.
-
-**Acceptance Scenarios**:
-
-1. **Given** the dashboard, **When** I press `p`, **Then** a project list modal shows all directories with docker-compose.yml in parent/sibling folders
-2. **Given** the project list, **When** I select a project and press Enter, **Then** TUI switches context and dashboard reloads with that project's containers
-3. **Given** the project list, **When** viewing, **Then** current project is highlighted and marked with `[current]`
-4. **Given** a project has running containers, **When** shown in list, **Then** it displays running container count (e.g., "myproject (4 running)")
-5. **Given** the project list, **When** I press `Esc`, **Then** modal closes without switching projects
-
----
-
-### Deferred Stories (Phase 2+)
-
-These features are intentionally excluded from MVP to keep scope focused:
-
-- **Configuration Editor**: Edit .20i-local, .env, stack-vars.yml files in TUI (currently done manually)
-- **PHP Version Validation**: Validate PHP_VERSION against Docker Hub tags with EOL warnings
-- **Extended YAML Config**: Support HOST_PORT, MYSQL_PORT, ENABLE_REDIS, etc. in stack-vars.yml
-- **Resource Monitoring**: Graphs/charts for CPU, memory, network over time
-- **Image Management**: Pull, remove, list Docker images
-- **Custom Commands**: User-defined shortcuts and scripts
-
-**Rationale**: The existing 20i-gui doesn't have these features, so they're enhancements rather than baseline functionality. MVP focuses on matching 20i-gui plus modern TUI patterns.
+**Rationale**: Phase 3a focuses on the CORE workflow: detect project → validate → start stack → show status. Individual container management and multi-project features come after the foundation is solid.
 
 ---
 
@@ -161,11 +161,12 @@ These features are intentionally excluded from MVP to keep scope focused:
 
 - What happens when Docker daemon is not running? (show error screen with retry button)
 - How does the TUI handle terminal resize events? (SIGWINCH - recalculate layout, minimum 80x24)
-- What happens when a container action fails? (show inline error for 3s, maintain UI state)
-- What happens if user starts TUI from non-project directory? (show error: "No docker-compose.yml found")
-- What happens when project has no running containers? (dashboard shows empty list with hint "Press S to start stack")
-- What happens when log buffer exceeds 10,000 lines? (truncate oldest lines, show "[truncated]" indicator)
-- How does project switcher detect 20i stacks vs generic Docker Compose? (check for .20i-local or apache+mariadb+nginx services)
+- What happens when a stack operation fails? (show inline error in bottom panel, maintain UI state)
+- What happens if user starts TUI from non-project directory? (show error: "No public_html/ found. Press T to create from template.")
+- What happens when stack is not running? (right panel shows "Stack not running. Press S to start.")
+- What happens when `public_html/` is missing? (right panel shows warning with option to create from template)
+- What happens if demo-site-folder template is missing? (show error with path to expected template location)
+- How does project name sanitization work? (same as 20i-gui: lowercase, replace invalid chars with hyphens)
 
 ---
 
@@ -173,53 +174,69 @@ These features are intentionally excluded from MVP to keep scope focused:
 
 ### Functional Requirements
 
+**Project Detection & Pre-flight (Phase 3a)**
+- **FR-001**: TUI MUST detect current working directory (`$PWD`) as project root on startup
+- **FR-002**: TUI MUST derive project name from directory name, sanitized same as 20i-gui (lowercase, hyphens)
+- **FR-003**: TUI MUST check for `public_html/` directory existence as pre-flight validation
+- **FR-004**: TUI MUST display pre-flight status in right panel: "Ready" (✅) or "Missing public_html/" (⚠️)
+- **FR-005**: TUI MUST support `T` key to create `public_html/` from `demo-site-folder/` template
+- **FR-006**: TUI MUST NOT allow stack start (`S`) if `public_html/` is missing (prevent accidental starts)
+
+**Three-Panel Layout (Phase 3a)**
+- **FR-010**: TUI MUST use three-panel layout: left (25%) | right (75%) | bottom (3 lines)
+- **FR-011**: Left panel MUST show: project name, directory path, stack status indicator
+- **FR-012**: Right panel MUST be dynamic: pre-flight status → compose output → status table
+- **FR-013**: Bottom panel MUST show: available commands + status messages
+- **FR-014**: TUI MUST use Lipgloss for ALL styling (no raw ANSI codes)
+- **FR-015**: TUI MUST run in alternate screen mode with clean restoration on exit
+
+**Stack Lifecycle (Phase 3a)**
+- **FR-020**: `S` key MUST start stack: run `docker compose up -d` with `CODE_DIR=$(pwd)` and `COMPOSE_PROJECT_NAME={sanitized-name}`
+- **FR-021**: Stack start MUST use 20i-stack docker-compose.yml (from `STACK_FILE` env or default location)
+- **FR-022**: During stack start, right panel MUST show live compose output (streaming)
+- **FR-023**: `T` key (when stack running) MUST stop stack: run `docker compose down`
+- **FR-024**: `R` key MUST restart stack: run `docker compose restart`
+- **FR-025**: All operations MUST provide feedback in bottom panel: "Starting stack..." → "✅ Stack running"
+- **FR-026**: Failed operations MUST show user-friendly error: "❌ Port 80 in use" (not raw Docker error)
+
+**Stack Status Table (Phase 3a)**
+- **FR-030**: Status table MUST show columns: Service, Status (●/○), Image, URL/Port, CPU%
+- **FR-031**: nginx row MUST show URL: `http://localhost:{HOST_PORT}` (default 80)
+- **FR-032**: phpmyadmin row MUST show URL: `http://localhost:{PMA_PORT}` (default 8081)
+- **FR-033**: mariadb row MUST show Port: `localhost:{MYSQL_PORT}` (default 3306)
+- **FR-034**: CPU% MUST display as block graph: `▓▓▓░░░░░░░` (10 chars) with percentage
+- **FR-035**: Status table MUST refresh automatically every 5s while stack is running
+- **FR-036**: apache row MUST show "internal" (not directly accessible, proxied via nginx)
+
+**Destroy Stack (Phase 3a)**
+- **FR-040**: `D` key MUST show first confirmation modal with data loss warning
+- **FR-041**: First confirmation MUST require typing "yes" to proceed to second confirmation
+- **FR-041a**: Second confirmation MUST show "Are you SURE? Type 'destroy' to confirm" with red warning
+- **FR-041b**: Only typing "destroy" exactly proceeds with operation
+- **FR-042**: Destroy MUST run `docker compose down -v` (removes volumes)
+- **FR-043**: After destroy, status MUST update to "Not Running" and status table clears
+- **FR-043a**: Both Esc and incorrect input at any confirmation stage cancels operation
+
+**Defaults (Phase 3a - simplified)**
+- **FR-050**: phpMyAdmin image MUST default to ARM-native on Apple Silicon: `arm64v8/phpmyadmin:latest`
+- **FR-050a**: phpMyAdmin image MUST fall back to standard image on x86: `phpmyadmin:latest`
+- **FR-050b**: phpMyAdmin image selection MUST be overridable via `PHPMYADMIN_IMAGE` environment variable
+- **FR-051**: Port selection MUST use auto-selection (find free port) like 20i-gui `find_free_port()` (deferred to Phase 4)
+- **FR-052**: TUI MUST read `STACK_FILE` and `STACK_HOME` from environment if set
+- **FR-052a**: TUI MUST validate STACK_FILE exists before executing docker compose commands
+
 **Core TUI Framework**
-- **FR-001**: TUI MUST use Bubble Tea v1.3.10+ framework with Elm Architecture (Model-Update-View pattern)
-- **FR-002**: TUI MUST use Bubbles components (list.Model, viewport.Model) for service list and log viewer
-- **FR-003**: TUI MUST use Lipgloss for ALL styling (no raw ANSI codes)
-- **FR-004**: TUI MUST run in alternate screen mode with clean restoration on exit (restore cursor, clear alt screen)
-- **FR-005**: TUI MUST use 3-panel layout: service list (left 25%) | detail/logs (right 75%) | help footer (2 lines)
-
-**Dashboard & Service List**
-- **FR-010**: Dashboard MUST show all project containers with name, status (icon+color), CPU%, memory% in left panel
-- **FR-011**: Service list MUST use Bubbles list.Model component with vim-style navigation (j/k, arrow keys)
-- **FR-012**: Dashboard MUST auto-refresh container stats every 2s using background goroutine + tea.Tick
-- **FR-013**: Selected service MUST show detail panel with: image, ports, uptime, container ID, volumes (read-only view)
-- **FR-014**: Status indicators MUST use: 🟢 Green="Running", ⚪ Gray="Stopped", 🟡 Yellow="Restarting", 🔴 Red="Error"
-
-**Container Lifecycle**
-- **FR-020**: System MUST support single-service operations: start (`s`), stop (`s` toggle), restart (`r`)
-- **FR-021**: System MUST support whole-stack operations: stop all (`S`), restart all (`R`), start all (if all stopped)
-- **FR-022**: Destroy stack (`D`) MUST show confirmation modal requiring "yes" to proceed, run `docker compose down -v`
-- **FR-023**: All operations MUST provide inline feedback: "Starting apache..." → "✅ apache started" (3s duration)
-- **FR-024**: Failed operations MUST show error inline: "❌ Failed to start apache: port 80 in use" (persist until dismissed)
-
-**Log Viewer**
-- **FR-030**: Log viewer MUST open in bottom panel (replacing detail) when `l` pressed, use Bubbles viewport.Model
-- **FR-031**: Log viewer MUST load last 100 lines on open, support follow mode toggle (`f`), auto-scroll when following
-- **FR-032**: Log viewer MUST support search filter (`/`) that highlights matches as user types
-- **FR-033**: Log buffer MUST cap at 10,000 lines per container, auto-truncate oldest lines
-- **FR-034**: Log viewer MUST close with `Esc` or `q`, return to detail panel
-
-**Project Switching**
-- **FR-040**: Project switcher (`p`) MUST show modal list of directories with docker-compose.yml (search up 2 levels from current)
-- **FR-041**: Project list MUST mark current project with `[current]` indicator
-- **FR-042**: Project list MUST show running container count per project (e.g., "myproject (4 running)")
-- **FR-043**: Switching projects MUST clear all state (logs, stats cache) and reload from new project directory
-- **FR-044**: 20i stack detection: docker-compose.yml exists AND (services include apache+mariadb+nginx OR .20i-local exists)
-
-**Navigation & Input**
-- **FR-050**: Global shortcuts MUST work from any view: `?`=help, `q`=quit, `p`=projects, `:cmd`=command mode
-- **FR-051**: Service list navigation MUST support: `↑/k`=up, `↓/j`=down, `Enter`=show detail, `Tab`=cycle panels
-- **FR-052**: Help modal (`?`) MUST show context-aware shortcuts for current active panel
-- **FR-053**: Footer MUST always show top 8 shortcuts for current context (e.g., "?:help  s:start/stop  r:restart  l:logs  q:quit")
+- **FR-060**: TUI MUST use Bubble Tea v1.3.10+ framework with Elm Architecture (Model-Update-View pattern)
+- **FR-061**: TUI MUST use Lipgloss for ALL styling (no raw ANSI codes)
+- **FR-062**: TUI MUST handle terminal resize events (SIGWINCH - recalculate layout, minimum 80x24)
+- **FR-063**: TUI MUST support mouse input for clicking URLs, selecting rows, and button interactions
+- **FR-064**: URLs in status table MUST be clickable - clicking opens URL in default web browser
+- **FR-065**: TUI MUST enable Bubble Tea mouse support via tea.WithMouseCellMotion() program option
 
 **Error Handling**
-- **FR-060**: When Docker daemon unreachable, MUST show error screen with "Docker not running" + retry button (`r`)
-- **FR-061**: System MUST auto-retry Docker connection every 5s in background, show "Retrying..." indicator
-- **FR-062**: Terminal < 80x24 MUST show error: "Terminal too small (need 80x24, got {w}x{h})" with resize hint
-- **FR-063**: Missing docker-compose.yml MUST show error: "Not a Docker Compose project. Run from project directory."
-- **FR-064**: All Docker API errors MUST be user-friendly (e.g., "port 80 in use" not "bind: address already in use")
+- **FR-070**: When Docker daemon unreachable, MUST show error screen with "Docker not running" + retry hint
+- **FR-071**: Terminal < 80x24 MUST show error: "Terminal too small (need 80x24, got {w}x{h})"
+- **FR-072**: All Docker errors MUST be user-friendly (e.g., "port 80 in use" not "bind: address already in use")
 
 ---
 
@@ -368,47 +385,68 @@ tui/
 
 ### Visual Design Specification
 
-**Layout Dimensions** (based on research - 3-panel golden ratio):
+**Layout Dimensions** (Phase 3a - Three-Panel Layout):
 
 ```
 Minimum: 80x24 characters
 Recommended: 120x40 characters
 
+Phase 3a MVP Layout (Project-Aware):
 ┌─ 20i Stack Manager ─────────────────────────────────────────────┐
-│ Project: myproject                           Docker ✓  CPU: 12%  │ <- Header (1 line)
-├──────────────┬──────────────────────────────────────────────────┤
-│ Services     │ Service: apache                                  │
-│              │ Status: 🟢 Running                                │
-│ 🟢 apache    │ Image:  php:8.2-apache                           │
-│   mariadb    │ Uptime: 2h 34m                                   │
-│   nginx      │                                                  │
-│   phpmyadmin │ CPU:    45% ▓▓▓▓▓░░░░░ (0.9 cores)              │
-│              │ Memory: 128MB/512MB ▓▓░░░░░░░░ (25%)             │
-│ (25% width)  │                                                  │
-│              │ Ports:  80:8080, 443:8443                        │
-│              │ ID:     a3f2d1b8c9e4                             │
-│              │                                                  │
-│              │ (75% width, dynamic height based on log panel)   │
-├──────────────┴──────────────────────────────────────────────────┤
-│ ?:help  Tab:panels  s:start/stop  r:restart  l:logs  q:quit     │ <- Footer (1 line)
+│                                                                  │
+├───────────────────┬──────────────────────────────────────────────┤
+│ ✅ my-website     │ Stack Status (4 containers running)         │
+│                   │                                              │
+│ 📁 ~/projects/    │ ┌─────────────────────────────────────────┐ │
+│    my-website     │ │ Service   Status  Image         URL/Port│ │
+│                   │ ├─────────────────────────────────────────┤ │
+│ Stack: Running    │ │ ● nginx   Running nginx:1.25   :80 →    │ │
+│                   │ │            http://localhost:80          │ │
+│                   │ │ ● apache  Running dev-apache   internal │ │
+│                   │ │ ● mariadb Running mariadb:10.6 :3306    │ │
+│ (25% width)       │ │ ● pma     Running phpmyadmin   :8081 →  │ │
+│                   │ │            http://localhost:8081        │ │
+│                   │ │                                         │ │
+│                   │ │ CPU: ▓▓▓░░░░░░░ 28%                    │ │
+│                   │ └─────────────────────────────────────────┘ │
+│                   │                           (75% width)       │
+├───────────────────┴──────────────────────────────────────────────┤
+│ S:Start  T:Stop  R:Restart  D:Destroy  ?:Help  q:Quit           │
+│ ✅ Stack running • 4 containers • http://localhost:80           │
 └──────────────────────────────────────────────────────────────────┘
 
-With logs open (l key pressed):
+Pre-flight State (missing public_html/):
 ┌─ 20i Stack Manager ─────────────────────────────────────────────┐
-│ Project: myproject                           Docker ✓  CPU: 12%  │
-├──────────────┬──────────────────────────────────────────────────┤
-│ Services     │ Service: apache                                  │
-│              │ Status: 🟢 Running  Uptime: 2h 34m                │
-│ 🟢 apache    │ CPU: 45% ▓▓▓▓▓░░░░░  Memory: 128MB ▓▓░░░░░░░░  │
-│   mariadb    ├──────────────────────────────────────────────────┤
-│   nginx      │ Logs (following) - /search to filter            │
-│   phpmyadmin │ [2025-12-28 10:23:45] GET /index.php 200         │
-│              │ [2025-12-28 10:23:46] GET /styles.css 200        │
-│ (25%)        │ [2025-12-28 10:23:47] POST /api/data 201         │
-│              │ ...                                              │
-│              │ (70% of right panel = ~50% total height)         │
-├──────────────┴──────────────────────────────────────────────────┤
-│ f:follow  /:search  Esc:close logs  ↑↓:scroll  q:quit           │
+├───────────────────┬──────────────────────────────────────────────┤
+│ ⚠️ my-website     │                                              │
+│                   │   ⚠️  Missing public_html/ directory         │
+│ 📁 ~/projects/    │                                              │
+│    my-website     │   Your web project needs a public_html/      │
+│                   │   folder to serve files from.                │
+│ Stack: Not Ready  │                                              │
+│                   │   Press T to create from template            │
+│                   │   (copies demo-site-folder/ structure)       │
+│                   │                                              │
+├───────────────────┴──────────────────────────────────────────────┤
+│ T:Create Template  ?:Help  q:Quit                                │
+│ ⚠️ Cannot start stack without public_html/                       │
+└──────────────────────────────────────────────────────────────────┘
+
+Starting State (compose output streaming):
+┌─ 20i Stack Manager ─────────────────────────────────────────────┐
+├───────────────────┬──────────────────────────────────────────────┤
+│ 🔄 my-website     │ Starting Stack...                            │
+│                   │                                              │
+│ 📁 ~/projects/    │ [+] Running 4/4                              │
+│    my-website     │  ⠿ Container my-website-nginx-1    Started  │
+│                   │  ⠿ Container my-website-apache-1   Started  │
+│ Stack: Starting   │  ⠿ Container my-website-mariadb-1  Started  │
+│                   │  ⠿ Container my-website-pma-1      Started  │
+│                   │                                              │
+│                   │ Waiting for containers to be healthy...      │
+│                   │                                              │
+├───────────────────┴──────────────────────────────────────────────┤
+│ Starting stack...                                                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -505,54 +543,47 @@ var (
 - **NFR-007**: Log buffer MUST NOT exceed 40MB total (4 containers × 10k lines × 1KB avg)
 - **NFR-008**: Background goroutines MUST NOT block main UI thread (all I/O async)
 - **NFR-009**: User settings and TUI artifacts MUST live under `~/.20istackman` (create on first run)
+- **NFR-010**: All exported Go types, functions, and packages MUST have godoc comments
+- **NFR-011**: Complex logic MUST have inline comments explaining "why" (not just "what")
+- **NFR-012**: Main README.md MUST include TUI installation, usage, and keyboard shortcuts
+- **NFR-013**: User documentation MUST exist in `/docs/tui/` for detailed guides and troubleshooting
 
 ### Keyboard Shortcuts
 
-**Global (work from any view)**:
-- `?` - Show help modal with all shortcuts
-- `q` or `Ctrl-C` - Quit TUI (with confirmation if operations in progress)
-- `p` - Open project switcher modal
-- `Tab` - Cycle focus between panels (list → detail → logs)
-- `Shift-Tab` - Cycle focus backwards
+**Phase 3a - Project Stack Management** (MVP):
+- `S` - Start stack (`docker compose up -d` with CODE_DIR)
+- `T` - Stop stack / Create template (context-dependent)
+  - If `public_html/` missing: Create from template
+  - If stack running: Stop stack (`docker compose down`)
+- `R` - Restart stack (`docker compose restart`)
+- `D` - Destroy stack (double-confirmation required, `docker compose down -v`)
+- `?` - Show help modal
+- `q` or `Ctrl-C` - Quit TUI
 
-**Service List Panel** (when focused):
-- `↑` or `k` - Move selection up
+**Phase 3b - Container Navigation** (deferred):
+- `↑` or `k` - Move selection up in service list
 - `↓` or `j` - Move selection down
-- `Enter` - Show detail for selected service (focus detail panel)
-- `s` - Start/stop selected service (toggle)
-- `r` - Restart selected service
-- `l` - Open logs for selected service (focus log panel)
-- `S` (shift-s) - Stop all stack containers (with confirmation)
-- `R` (shift-r) - Restart entire stack (docker compose restart)
-- `D` (shift-d) - Destroy stack (down -v, requires "yes" confirmation)
+- `s` - Start/stop selected individual container
+- `r` - Restart selected individual container
 
-**Log Panel** (when open and focused):
-- `f` - Toggle follow mode (auto-scroll on new lines)
-- `/` - Search/filter logs (type to filter, Esc to clear)
-- `↑` or `k` - Scroll up (when not following)
-- `↓` or `j` - Scroll down
-- `g` - Jump to top of logs
-- `G` (shift-g) - Jump to bottom of logs
-- `Esc` or `q` - Close log panel, return to detail view
+**Phase 4+ - Multi-Project & Logs** (deferred):
+- `p` - Open project switcher modal
+- `l` - Open logs for selected service
+- `f` - Toggle follow mode in logs
+- `/` - Search/filter
 
-**Project Switcher Modal** (when open):
-- `↑` or `k` - Move up in project list
-- `↓` or `j` - Move down
-- `Enter` - Switch to selected project
-- `Esc` - Close modal without switching
-- `/` - Filter projects by name
+**Mouse Support** (Phase 3a):
+- **Click URL** - Opens URL in default web browser (nginx, phpMyAdmin)
+- **Click status table row** - Selects container (Phase 3b)
+- **Scroll wheel** - Navigate lists and output panels
+- **Click modal buttons** - Confirm/cancel actions
 
-**Help Modal** (when open):
-- `?` or `Esc` - Close help
-- `↑/↓` or `j/k` - Scroll help content
-
-**Design Rationale** (from research):
-- **Vim bindings** (`j/k`) + arrow keys for accessibility
-- **Single-key actions** (no Ctrl/Alt combos for common tasks)
-- **Shift for "all"** operations (S=stop all, R=restart all, D=destroy all)
-- **Consistent verbs**: `s`=start/stop everywhere, `r`=restart, `l`=logs
-- **`/` for search** (universal pattern from vim, lazygit, k9s)
-- **`Esc` always cancels/closes** (modal dialogs, log panel, search)
+**Design Rationale**:
+- **Uppercase for stack operations** - S/T/R/D operate on entire stack
+- **Lowercase for container operations** - s/r operate on selected container (Phase 3b)
+- **Single-key actions** - no Ctrl/Alt combos for common tasks
+- **`Esc` always cancels/closes** - modal dialogs, confirmations
+- **Mouse optional** - all actions remain keyboard-accessible
 
 ---
 
@@ -588,6 +619,13 @@ var (
 - **SC-011**: Zero data loss from failed operations (atomic Docker API calls, clear error states)
 - **SC-012**: TUI handles Docker daemon restart gracefully (shows error, auto-retries, reconnects)
 - **SC-013**: Terminal resize never crashes or corrupts display (re-layout on SIGWINCH)
+
+**Documentation** (completeness):
+- **SC-021**: All exported Go types have godoc comments (verified by `go doc`)
+- **SC-022**: Main README.md includes TUI section with install, usage, shortcuts
+- **SC-023**: User guide exists in /docs/tui/ with troubleshooting section
+- **SC-024**: CHANGELOG.md documents all Phase 3a features
+- **SC-025**: Complex logic has inline "why" comments (e.g., sanitization regex, state transitions)
 
 **Compatibility**:
 - **SC-014**: Works with existing .20i-local files (no migration needed)
@@ -672,10 +710,19 @@ tui/
       layout.go                     # Panel sizing functions
 ```
 
+**New Documentation Files**:
+```
+docs/
+  tui/
+    user-guide.md                   # End-user guide (installation, usage, shortcuts)
+    troubleshooting.md              # Common issues and solutions
+    architecture.md                 # Developer guide (Bubble Tea, components)
+```
+
 **Modified Files**:
-- `README.md` - Add "TUI Interface" section with install/usage
-- `CHANGELOG.md` - Document new 20i-tui feature in v2.0.0
-- `.gitignore` - Add `tui/20i-tui` (compiled binary)
+- `README.md` - Add "Terminal UI" section with install/usage/shortcuts
+- `CHANGELOG.md` - Document Phase 3a features in [Unreleased] section
+- `.gitignore` - Add `tui/20i-stack-manager` (compiled binary)
 
 **Unchanged Files** (important for compatibility):
 - `20i-gui` - Existing GUI still works, can coexist

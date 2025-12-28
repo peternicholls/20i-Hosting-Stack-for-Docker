@@ -105,7 +105,7 @@ func TestRootModelView(t *testing.T) {
 		activeView   string
 		expectedText string
 	}{
-		{"dashboard view", "dashboard", "Dashboard View"},
+		{"dashboard view", "dashboard", "Dashboard"},
 		{"help view", "help", "Global"},
 		{"projects view", "projects", "Projects View"},
 	}

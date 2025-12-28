@@ -7,7 +7,17 @@
 
 ## Summary
 
-A professional terminal UI (TUI) built with Bubble Tea framework to replace the existing 20i-gui bash script. Provides a modern, keyboard-driven interface with 3-panel layout for managing 20i Docker stack containers, viewing real-time stats, streaming logs, and project switching. MVP replicates all 20i-gui functionality (start/stop/restart/status/logs/destroy) following best practices from lazydocker, lazygit, and k9s.
+A professional terminal UI (TUI) built with Bubble Tea framework to replace the existing 20i-gui bash script. Provides a modern, keyboard-driven interface with **project-aware stack management**. The TUI is run from a web project directory and manages the 20i stack for THAT project.
+
+**Phase 3a MVP Focus**: Project detection → Pre-flight validation → Stack lifecycle → Status table with URLs
+
+**Core Workflow** (replicates 20i-gui):
+1. User navigates to web project directory: `cd ~/my-website/`
+2. User launches TUI: `20i-stack-manager`
+3. TUI detects project, validates `public_html/`, shows status
+4. User presses `S` to start stack (sets `CODE_DIR`, `COMPOSE_PROJECT_NAME`)
+5. Right panel shows compose output, then status table with URLs
+6. User can stop (`T`), restart (`R`), or destroy (`D`) stack
 
 ## Technical Context
 
@@ -121,20 +131,29 @@ tui/
     ├── app/
     │   ├── root.go            # RootModel (top-level app state)
     │   └── messages.go        # Custom tea.Msg types
+    ├── project/               # Phase 3a - Project detection logic (singular)
+    │   ├── detector.go        # Project detection ($PWD, public_html check)
+    │   ├── template.go        # Template installation from demo-site-folder
+    │   └── sanitize.go        # Project name sanitization (20i-gui compatible)
     ├── views/
     │   ├── dashboard/
-    │   │   ├── dashboard.go   # DashboardModel
-    │   │   ├── service_list.go # Service list panel
-    │   │   ├── detail.go      # Detail panel
-    │   │   └── logs.go        # Log panel
+    │   │   ├── dashboard.go   # DashboardModel (three-panel layout)
+    │   │   ├── left_panel.go  # Project info panel
+    │   │   ├── right_panel.go # Dynamic: pre-flight/output/status table
+    │   │   ├── bottom_panel.go # Commands and status messages
+    │   │   └── status_table.go # Stack status table with URLs
     │   ├── help/
     │   │   └── help.go        # Help modal
-    │   └── projects/
-    │       └── projects.go    # Project switcher modal
+    │   └── projects/          # Phase 4+ - Multi-project browser (deferred)
+    │       └── projects.go    # ProjectListModel (to be implemented)
+    ├── stack/
+    │   ├── compose.go         # Docker Compose operations (up/down/restart)
+    │   ├── env.go             # Environment variable handling (CODE_DIR, STACK_FILE, etc)
+    │   ├── platform.go        # Platform detection (ARM64 vs x86) - Phase 3a
+    │   └── status.go          # Stack status detection
     ├── docker/
     │   ├── client.go          # Docker SDK wrapper
-    │   ├── stats.go           # Background stats collector
-    │   └── filters.go         # Project/container filtering
+    │   └── stats.go           # Container stats (CPU%)
     └── ui/
         ├── styles.go          # Lipgloss styles (colors, borders)
         ├── components.go      # Reusable components (StatusIcon, ProgressBar)
@@ -145,7 +164,7 @@ tests/
     └── tui_test.go            # Integration tests (mock Docker client)
 ```
 
-**Structure Decision**: Single project structure (Option 1) chosen. TUI is a standalone Go application with internal packages for separation of concerns (views, Docker integration, UI components). No backend/frontend split needed - this is a terminal application. The `internal/` directory enforces package privacy following Go best practices.
+**Structure Decision**: Single project structure with project-aware modules. The `internal/project/` package handles the core 20i-gui workflow (detect project, validate, sanitize name). The `internal/stack/` package wraps Docker Compose operations with proper environment variable handling.
 
 ## Complexity Tracking
 

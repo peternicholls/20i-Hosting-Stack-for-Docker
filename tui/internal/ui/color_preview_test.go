@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
-// ...existing code...
+	// ...existing code...
 )
 
 // TestColorPreview renders simple swatches for all defined palette entries.

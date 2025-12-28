@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/peternicholls/20i-stack/tui/internal/docker"
+	"github.com/peternicholls/20i-stack/tui/internal/views/dashboard"
 )
 
 // RootModel coordinates the entire application state and view routing.
@@ -20,6 +21,9 @@ type RootModel struct {
 
 	// Current active view state
 	activeView string // "dashboard", "help", "projects", "logs"
+
+	// Views
+	dashboard dashboard.Model
 
 	// Terminal dimensions
 	width  int
@@ -39,6 +43,7 @@ func NewRootModel(ctx context.Context) (*RootModel, error) {
 	return &RootModel{
 		dockerClient: cli,
 		activeView:   "dashboard",
+		dashboard:    dashboard.NewModel(cli, ""),
 		width:        80,
 		height:       24,
 	}, nil
@@ -46,8 +51,10 @@ func NewRootModel(ctx context.Context) (*RootModel, error) {
 
 // Init initializes the root model and returns initial commands
 func (m *RootModel) Init() tea.Cmd {
-	// Could return commands to fetch initial data, but for now just return nil
-	return nil
+	if m.dockerClient == nil {
+		return nil
+	}
+	return m.dashboard.Init()
 }
 
 // Update handles all incoming messages and routes to appropriate handlers
@@ -87,7 +94,14 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: Notify dashboard of project switch
 	}
 
-	return m, nil
+	switch m.activeView {
+	case "dashboard":
+		updated, cmd := m.dashboard.Update(msg)
+		m.dashboard = updated
+		return m, cmd
+	default:
+		return m, nil
+	}
 }
 
 // View renders the current view based on activeView state
@@ -103,11 +117,10 @@ func (m *RootModel) View() string {
 }
 
 func (m *RootModel) renderDashboardView() string {
-	// TODO: Render dashboard view
 	if m.lastError != nil {
 		return "ERROR: " + m.lastError.Error()
 	}
-	return "Dashboard View\nPress '?' for help, 'p' for projects, 'q' to quit"
+	return m.dashboard.View()
 }
 
 func (m *RootModel) renderHelpView() string {

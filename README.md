@@ -21,7 +21,31 @@ docker, docker-compose, php, php-fpm, nginx, mariadb, phpmyadmin, apple-silicon,
 
 ## Quick Start
 
-### Shell Commands (Recommended)
+### TUI Manager (Recommended - In Development)
+```bash
+# Navigate to your web project first
+cd /path/to/your/website
+
+# Launch the TUI
+20i-stack-manager   # If installed via 'make install'
+
+# Or build and run from source:
+cd /path/to/20i-stack/tui/
+make build
+./bin/20i-stack-manager
+```
+
+**TUI Workflow** (Project-Aware Stack Management):
+- 📂 **Current Project**: Displays the directory you're working in (left panel)
+- ✅ **Pre-flight Checks**: Validates `public_html/` folder, offers template installation
+- 🚀 **Stack Operations**: Start/stop/restart entire stack for current project
+- 📊 **Live Metrics**: Real-time container status, ports, CPU, memory (like Docker Desktop)
+- 📁 **Code Mounting**: Auto-mounts current directory as `CODE_DIR`
+- ⌨️ **Keyboard Navigation**: Full keyboard-driven interface
+- 🎨 **Three-Panel Layout**: Project info (left) + Stack status (right) + Commands (bottom)
+- 🔮 **Future**: Multi-project browser to manage multiple sites
+
+### Shell Commands (Classic GUI)
 ```bash
 # From any project directory:
 20i-gui      # Interactive menu
@@ -41,6 +65,7 @@ docker compose up -d
 
 ## Features
 
+✅ **Terminal UI (TUI)** - Modern keyboard-driven interface (Go + Bubble Tea)  
 ✅ **Centralized Stack** - One stack serves any project  
 ✅ **Project Isolation** - Each project gets isolated containers  
 ✅ **Environment Variables** - Fully configurable via .env or .20i-local  
@@ -219,6 +244,7 @@ dcu
 - Docker Desktop for Mac
 - Bash/Zsh shell
 - Optional: `dialog` package for prettier GUI menus
+- Optional: Go 1.21+ for building the TUI from source
 
 ## License
 
