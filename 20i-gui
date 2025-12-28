@@ -202,7 +202,7 @@ start_stack() {
 # Function to stop stack
 stop_stack() {
     # Get list of running compose projects
-    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
     
     if [[ -z "$running_projects" ]]; then
         echo "ℹ️  No 20i stacks appear to be running"
@@ -272,13 +272,13 @@ view_status() {
     docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | head -20
     echo
     echo "📈 Docker Compose projects:"
-    docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u | nl
+    docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u | nl
 }
 
 # Function to view logs
 view_logs() {
     # Get list of running compose projects
-    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
     
     if [[ -z "$running_projects" ]]; then
         echo "ℹ️  No 20i stacks appear to be running"

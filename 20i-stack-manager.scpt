@@ -79,7 +79,7 @@ end startStack
 on stopStack()
     try
         # Get list of running compose projects
-        set shellScript to "docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u"
+        set shellScript to "docker ps --format 'table {{.Names}}' | grep -E '-.+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u"
         set runningProjects to do shell script shellScript
         
         if runningProjects = "" then
@@ -137,7 +137,7 @@ end viewStatus
 on viewLogs()
     try
         # Get list of running compose projects
-        set shellScript to "docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u"
+        set shellScript to "docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u"
         set runningProjects to do shell script shellScript
         
         if runningProjects = "" then

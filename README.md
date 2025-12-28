@@ -12,6 +12,7 @@ A reusable, centralized Docker development stack for PHP projects using:
 ### Shell Commands (Recommended)
 ```bash
 # From any project directory:
+20i
 dcu          # Start stack (uses current directory)
 dcd          # Stop stack
 20i          # View status
