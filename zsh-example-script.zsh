@@ -49,18 +49,18 @@ sanitize_project_name() {
         return 1
     fi
     
-    echo "🚀 Starting 20i stack for project: $PROJECT_NAME"
-    if [[ "$SAFE_PROJECT_NAME" != "$PROJECT_NAME" ]]; then
-        echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
-    fi
-    echo "📁 Code directory: $CODE_DIR"
-    
-    # Set project name based on current directory
+    # Set project name and code dir
     export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
     export CODE_DIR="$PROJECT_DIR"
     
     # Source optional per-project overrides
     [[ -f .20i-local ]] && source .20i-local
+    
+    echo "🚀 Starting 20i stack for project: $PROJECT_NAME"
+    if [[ "$SAFE_PROJECT_NAME" != "$PROJECT_NAME" ]]; then
+        echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
+    fi
+    echo "📁 Code directory: $CODE_DIR"
     
     docker compose -f "$STACK_FILE" up -d "$@"
 }
