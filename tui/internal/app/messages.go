@@ -70,3 +70,15 @@ type ErrorMsg struct {
 type SuccessMsg struct {
 	Message string
 }
+
+// ProjectDetectedMsg sent when project is successfully detected
+type ProjectDetectedMsg struct {
+	ProjectName   string
+	ProjectPath   string
+	HasPublicHTML bool
+}
+
+// TemplateInstalledMsg sent when template is successfully installed
+type TemplateInstalledMsg struct {
+	ProjectPath string
+}
