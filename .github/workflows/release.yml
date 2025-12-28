@@ -19,6 +19,7 @@ on:
 permissions:
     contents: write
     pull-requests: write
+    id-token: write
 
 concurrency:
     group: release-${{ github.ref }}
@@ -57,6 +58,7 @@ jobs:
                   release-type: simple
                   config-file: release-please-config.json
                   manifest-file: .release-please-manifest.json
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Release summary
               if: steps.release.outputs.release_created == 'true'
