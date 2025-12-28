@@ -57,7 +57,7 @@ on startStack()
         set shellScript to shellScript & "export CODE_DIR='" & projectPath & "';" & return
         set shellScript to shellScript & "echo '🚀 Starting 20i stack for project: " & projectName & "';" & return
         set shellScript to shellScript & "echo '📁 Code directory: " & projectPath & "';" & return
-        set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" up -d;" & return
+        set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\"; docker compose -f \"$STACK_FILE\" up -d;" & return
         set shellScript to shellScript & "echo '✅ Stack started! Access your site at: http://localhost';" & return
         set shellScript to shellScript & "echo '🔧 phpMyAdmin: http://localhost:8081';"
         

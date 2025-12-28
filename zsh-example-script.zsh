@@ -36,29 +36,40 @@ sanitize_project_name() {
     echo "$name"
 }
 
-# Function to start 20i stack
-20i-up() {
-    local PROJECT_DIR="$(pwd)"
-    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
-    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
-    local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
-    
-    # Check if stack directory exists
+# Helper to ensure stack file exists
+_20i_check_stack_file() {
     if [[ ! -f "$STACK_FILE" ]]; then
         echo "❌ Error: Docker compose file not found at $STACK_FILE"
         return 1
     fi
+}
+
+# Helper to set up project environment variables
+_20i_setup_project_env() {
+    local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
     
-    # Set project name and code dir
+    # Export environment variables
     export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
-    export CODE_DIR="$PROJECT_DIR"
+    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
+    
+    # Store values for functions to access
+    _20I_PROJECT_NAME="$PROJECT_NAME"
+    _20I_SAFE_PROJECT_NAME="$SAFE_PROJECT_NAME"
+}
+
+# Function to start 20i stack
+20i-up() {
+    _20i_check_stack_file || return 1
+    _20i_setup_project_env
     
     # Source optional per-project overrides
     [[ -f .20i-local ]] && source .20i-local
     
-    echo "🚀 Starting 20i stack for project: $PROJECT_NAME"
-    if [[ "$SAFE_PROJECT_NAME" != "$PROJECT_NAME" ]]; then
-        echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
+    echo "🚀 Starting 20i stack for project: $_20I_PROJECT_NAME"
+    if [[ "$_20I_SAFE_PROJECT_NAME" != "$_20I_PROJECT_NAME" ]]; then
+        echo "📛 Normalized project name: $_20I_SAFE_PROJECT_NAME"
     fi
     echo "📁 Code directory: $CODE_DIR"
     
@@ -67,19 +78,8 @@ sanitize_project_name() {
 
 # Function to stop 20i stack
 20i-down() {
-    local PROJECT_DIR="$(pwd)"
-    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
-    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
-    local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
-    
-    if [[ ! -f "$STACK_FILE" ]]; then
-        echo "❌ Error: Docker compose file not found at $STACK_FILE"
-        return 1
-    fi
-    
-    # Export CODE_DIR to satisfy docker-compose.yml requirements
-    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
+    _20i_check_stack_file || return 1
+    _20i_setup_project_env
     
     echo "🛑 Stopping 20i stack..."
     docker compose -f "$STACK_FILE" down "$@"
@@ -87,19 +87,8 @@ sanitize_project_name() {
 
 # Function to show 20i stack status
 20i-status() {
-    local PROJECT_DIR="$(pwd)"
-    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
-    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
-    local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
-    
-    if [[ ! -f "$STACK_FILE" ]]; then
-        echo "❌ Error: Docker compose file not found at $STACK_FILE"
-        return 1
-    fi
-    
-    # Export CODE_DIR to satisfy docker-compose.yml requirements
-    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
+    _20i_check_stack_file || return 1
+    _20i_setup_project_env
     
     echo "📊 20i stack status:"
     docker compose -f "$STACK_FILE" ps
@@ -107,40 +96,18 @@ sanitize_project_name() {
 
 # Function to view 20i stack logs
 20i-logs() {
-    local PROJECT_DIR="$(pwd)"
-    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
-    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
-    local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
-    
-    if [[ ! -f "$STACK_FILE" ]]; then
-        echo "❌ Error: Docker compose file not found at $STACK_FILE"
-        return 1
-    fi
-    
-    # Export CODE_DIR to satisfy docker-compose.yml requirements
-    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
+    _20i_check_stack_file || return 1
+    _20i_setup_project_env
     
     docker compose -f "$STACK_FILE" logs -f "$@"
 }
 
 # Function to destroy 20i stack (stop and remove volumes)
 20i-destroy() {
-    local PROJECT_DIR="$(pwd)"
-    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
-    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
-    local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
+    _20i_check_stack_file || return 1
+    _20i_setup_project_env
     
-    if [[ ! -f "$STACK_FILE" ]]; then
-        echo "❌ Error: Docker compose file not found at $STACK_FILE"
-        return 1
-    fi
-    
-    # Export CODE_DIR to satisfy docker-compose.yml requirements
-    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
-    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
-    
-    echo "⚠️  WARNING: This will destroy the stack for project: $SAFE_PROJECT_NAME"
+    echo "⚠️  WARNING: This will destroy the stack for project: $_20I_SAFE_PROJECT_NAME"
     echo "    - Stop all containers"
     echo "    - Remove all volumes (database data will be lost!)"
     echo "    - Remove networks"
@@ -150,7 +117,7 @@ sanitize_project_name() {
     if [[ "$confirmation" == "yes" ]]; then
         echo "💥 Destroying 20i stack..."
         docker compose -f "$STACK_FILE" down -v
-        echo "✅ Stack destroyed: $SAFE_PROJECT_NAME"
+        echo "✅ Stack destroyed: $_20I_SAFE_PROJECT_NAME"
     else
         echo "❌ Destroy cancelled"
         return 1

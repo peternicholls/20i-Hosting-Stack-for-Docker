@@ -1,4 +1,6 @@
 # 20i Stack - Docker Development Environment
+**A reusable Docker stack based on 20i's shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
+**Perfect for**: PHP development, Laravel projects, WordPress development, prototyping, and any web project needing a quick, reliable development environment.
 
 ## Overview
 A reusable, centralized Docker development stack for PHP projects using:
@@ -97,6 +99,9 @@ Add to your `.zshrc`:
 ```bash
 # 20i stack configuration
 # See zsh-example-script.zsh in the repo for full implementation
+# This logic sets STACK_FILE and STACK_HOME based on what's already defined:
+# - If STACK_FILE is set, derive STACK_HOME from it
+# - Otherwise, use STACK_HOME (or default) and set STACK_FILE from that
 if [[ -n "${STACK_FILE:-}" ]]; then
     STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
 else
@@ -191,4 +196,4 @@ MIT License - Use freely for development purposes.
 
 ---
 
-**Perfect for**: PHP development, Laravel projects, WordPress development, prototyping, and any web project needing a quick, reliable development environment.
+
