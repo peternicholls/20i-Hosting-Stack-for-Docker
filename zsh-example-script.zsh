@@ -124,6 +124,39 @@ sanitize_project_name() {
     docker compose -f "$STACK_FILE" logs -f "$@"
 }
 
+# Function to destroy 20i stack (stop and remove volumes)
+20i-destroy() {
+    local PROJECT_DIR="$(pwd)"
+    local PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    local SAFE_PROJECT_NAME="$(sanitize_project_name "$PROJECT_NAME")"
+    local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
+    
+    if [[ ! -f "$STACK_FILE" ]]; then
+        echo "❌ Error: Docker compose file not found at $STACK_FILE"
+        return 1
+    fi
+    
+    # Export CODE_DIR to satisfy docker-compose.yml requirements
+    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$SAFE_PROJECT_NAME}"
+    
+    echo "⚠️  WARNING: This will destroy the stack for project: $SAFE_PROJECT_NAME"
+    echo "    - Stop all containers"
+    echo "    - Remove all volumes (database data will be lost!)"
+    echo "    - Remove networks"
+    echo ""
+    read -p "Are you sure? (type 'yes' to confirm): " confirmation
+    
+    if [[ "$confirmation" == "yes" ]]; then
+        echo "💥 Destroying 20i stack..."
+        docker compose -f "$STACK_FILE" down -v
+        echo "✅ Stack destroyed: $SAFE_PROJECT_NAME"
+    else
+        echo "❌ Destroy cancelled"
+        return 1
+    fi
+}
+
 # Aliases for convenience
 alias 20i='20i-status'
 alias dcu='20i-up'

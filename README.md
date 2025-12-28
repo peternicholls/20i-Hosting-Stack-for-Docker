@@ -12,11 +12,10 @@ A reusable, centralized Docker development stack for PHP projects using:
 ### Shell Commands (Recommended)
 ```bash
 # From any project directory:
-20i
+20i-gui      # Interactive menu
+# Aliases:
 dcu          # Start stack (uses current directory)
 dcd          # Stop stack
-20i          # View status
-20i-gui      # Interactive menu
 ```
 
 ### Manual Usage
@@ -106,10 +105,11 @@ else
 fi
 
 # Functions (see zsh-example-script.zsh for full implementations)
-20i-up() { ... }     # Start stack
-20i-down() { ... }   # Stop stack
-20i-status() { ... } # View status
-20i-logs() { ... }   # View logs
+20i-up() { ... }      # Start stack
+20i-down() { ... }    # Stop stack
+20i-status() { ... }  # View status
+20i-logs() { ... }    # View logs
+20i-destroy() { ... } # Destroy stack (removes volumes!)
 
 # Aliases
 alias 20i='20i-status'
@@ -160,10 +160,17 @@ dcu
 
 ### Database Issues
 ```bash
-# Reset database
+# Reset database (or use 20i-destroy for complete cleanup)
 dcd
 docker volume rm $(docker volume ls -q | grep db_data)
 dcu
+```
+
+### Destroy Stack Completely
+```bash
+# WARNING: This removes all data including database volumes!
+20i-destroy           # Prompts for confirmation
+# Or from GUI: Choose option 6
 ```
 
 ### View Logs

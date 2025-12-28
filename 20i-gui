@@ -25,12 +25,13 @@ show_menu() {
     if command -v dialog >/dev/null 2>&1; then
         # Use dialog if available (prettier interface)
         dialog --clear --title "20i Stack Manager" \
-               --menu "Choose an action:" 15 50 5 \
+               --menu "Choose an action:" 18 50 6 \
                1 "🚀 Start Stack (current directory)" \
                2 "🛑 Stop Stack" \
                3 "🔁 Restart Stack" \
                4 "📊 View Status" \
-               5 "📋 View Logs" 2>/tmp/menu_choice
+               5 "📋 View Logs" \
+               6 "💥 Destroy Stack (removes volumes!)" 2>/tmp/menu_choice
         
         if [[ $? -eq 0 ]]; then
             choice=$(cat /tmp/menu_choice)
@@ -45,9 +46,10 @@ show_menu() {
         echo "=================="
         echo "1) 🚀 Start Stack (current directory)"
         echo "2) 🛑 Stop Stack"
-        echo "3) � Restart Stack"
+        echo "3) 🔁 Restart Stack"
         echo "4) 📊 View Status"
         echo "5) 📋 View Logs"
+        echo "6) 💥 Destroy Stack (removes volumes!)"
         echo "q) Quit"
         echo
         read -p "Choose an option: " choice
@@ -63,6 +65,7 @@ show_menu() {
         3) restart_stack ;;
         4) view_status ;;
         5) view_logs ;;
+        6) destroy_stack ;;
         *) echo "❌ Invalid choice"; exit 1 ;;
     esac
 }
@@ -296,6 +299,46 @@ view_logs() {
         echo "📋 Viewing logs for: $project (Press Ctrl+C to stop)"
         export CODE_DIR="$(pwd)"
         COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" logs -f
+    else
+        echo "❌ Invalid selection"
+        exit 1
+    fi
+}
+
+# Function to destroy stack (stop and remove volumes)
+destroy_stack() {
+    # Get list of running compose projects
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    
+    if [[ -z "$running_projects" ]]; then
+        echo "ℹ️  No 20i stacks appear to be running"
+        return 0
+    fi
+    
+    echo "💥 Running 20i stacks:"
+    echo "$running_projects" | nl
+    echo
+    
+    read -p "Enter project number to destroy: " choice
+    
+    local project=$(echo "$running_projects" | sed -n "${choice}p")
+    if [[ -n "$project" ]]; then
+        echo ""
+        echo "⚠️  WARNING: This will DESTROY the stack: $project"
+        echo "    - Stop all containers"
+        echo "    - Remove all volumes (database data will be LOST!)"
+        echo "    - Remove networks"
+        echo ""
+        read -p "Are you sure? (type 'yes' to confirm): " confirmation
+        
+        if [[ "$confirmation" == "yes" ]]; then
+            echo "💥 Destroying stack: $project"
+            export CODE_DIR="$(pwd)"
+            COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" down -v
+            echo "✅ Stack destroyed: $project"
+        else
+            echo "❌ Destroy cancelled"
+        fi
     else
         echo "❌ Invalid selection"
         exit 1
