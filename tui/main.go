@@ -20,14 +20,14 @@ func main() {
 	// Create RootModel with Docker client
 	rootModel, err := app.NewRootModel(ctx)
 	if err != nil {
-		fmt.Printf("Error initializing TUI: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error initializing TUI: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Create and run the Bubble Tea program
 	p := tea.NewProgram(rootModel)
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -59,11 +59,14 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "?":
 			m.activeView = "help"
+			m.lastError = nil // Clear error on view change
 		case "p":
 			m.activeView = "projects"
+			m.lastError = nil // Clear error on view change
 		case "esc":
 			if m.activeView != "dashboard" {
 				m.activeView = "dashboard"
+				m.lastError = nil // Clear error on view change
 			}
 		}
 
@@ -74,8 +77,13 @@ func (m *RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ErrorMsg:
 		m.lastError = msg.Err
 
+	case SuccessMsg:
+		// Clear error on success
+		m.lastError = nil
+
 	case ProjectSwitchMsg:
 		m.activeView = "dashboard"
+		m.lastError = nil // Clear error on view change
 		// TODO: Notify dashboard of project switch
 	}
 

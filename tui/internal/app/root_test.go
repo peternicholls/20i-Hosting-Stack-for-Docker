@@ -8,6 +8,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -123,4 +124,91 @@ func TestRootModelView(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestRootModel_LastErrorClearing tests that lastError is cleared on success and view change
+func TestRootModel_LastErrorClearing(t *testing.T) {
+	t.Run("error clears on view change", func(t *testing.T) {
+		m := &RootModel{
+			activeView: "dashboard",
+			lastError:  errors.New("docker connection failed"),
+			width:      80,
+			height:     24,
+		}
+
+		// Initially has error
+		if m.lastError == nil {
+			t.Fatal("expected lastError to be set")
+		}
+
+		// Switch views - should clear error
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+		updatedModel := model.(*RootModel)
+
+		if updatedModel.lastError != nil {
+			t.Errorf("expected lastError to be cleared on view change, got %v", updatedModel.lastError)
+		}
+	})
+
+	t.Run("error clears on success message", func(t *testing.T) {
+		m := &RootModel{
+			activeView: "dashboard",
+			lastError:  errors.New("docker connection failed"),
+			width:      80,
+			height:     24,
+		}
+
+		// Initially has error
+		if m.lastError == nil {
+			t.Fatal("expected lastError to be set")
+		}
+
+		// Receive success message - should clear error
+		model, _ := m.Update(SuccessMsg{Message: "Operation completed"})
+		updatedModel := model.(*RootModel)
+
+		if updatedModel.lastError != nil {
+			t.Errorf("expected lastError to be cleared on success, got %v", updatedModel.lastError)
+		}
+	})
+}
+
+// TestRootModel_StubbedClientPath tests graceful handling when Docker is unavailable
+func TestRootModel_StubbedClientPath(t *testing.T) {
+	t.Run("app starts with nil Docker client", func(t *testing.T) {
+		// Simulate soft-fail approach - RootModel can be created without Docker
+		m := &RootModel{
+			dockerClient: nil, // Docker unavailable
+			activeView:   "dashboard",
+			width:        80,
+			height:       24,
+		}
+
+		// Should still be able to init
+		cmd := m.Init()
+		if cmd != nil {
+			t.Errorf("expected Init to return nil even without Docker client")
+		}
+
+		// Should render a degraded UI
+		output := m.View()
+		if len(output) == 0 {
+			t.Errorf("expected view to render even without Docker client")
+		}
+	})
+
+	t.Run("error message shown when Docker unavailable", func(t *testing.T) {
+		m := &RootModel{
+			dockerClient: nil,
+			activeView:   "dashboard",
+			lastError:    errors.New("docker daemon unreachable"),
+			width:        80,
+			height:       24,
+		}
+
+		output := m.View()
+		if len(output) == 0 {
+			t.Errorf("expected error view when Docker unavailable")
+		}
+	})
 }

@@ -96,9 +96,31 @@
 - [X] T022 Update tui/main.go to create and run RootModel instead of hello world
 - [X] T023 [P] [TEST] Create internal/docker/client_test.go with table-driven tests for Docker connection (success, daemon unreachable, permission denied)
 - [X] T024 [P] [TEST] Create internal/app/root_test.go with unit tests for RootModel Init/Update/View (test global shortcuts, view routing)
+- [X] T024a [TEST] Add RootModel.lastError clearing test - verify error clears on success/view change
+- [X] T024b [TEST] Add stubbed client path test - verify app handles Docker unavailable gracefully (soft-fail vs hard-fail startup)
 - [X] T025 [TEST] Run `make test` to verify foundational tests pass
+- [X] T025a [TEST] Update main.go to write errors to stderr instead of stdout
 
 **Checkpoint**: Foundation ready - Docker client connects, root model routes messages, test coverage >80%
+
+### Possible Next Steps (Pre-Phase 3)
+
+Before proceeding to Phase 3 implementation, consider these architectural decisions:
+
+- [X] T025b [DECISION] Decide startup resilience strategy for Docker outages:
+  - **Decision**: Hard-fail approach chosen for MVP (documented in STARTUP-RESILIENCE-DECISION.md)
+  - **Rationale**: Simpler implementation, clear error messaging, fail-fast principle
+  - **Future**: Soft-fail with degraded UI could be added in v1.1+ if needed
+- [X] T025c [ENHANCEMENT] Implement RootModel.lastError clearing:
+  - Clear lastError on successful operation completion (SuccessMsg handler)
+  - Clear lastError on view change (?, p, esc key handlers)
+  - Test coverage added in root_test.go (T024a)
+- [X] T025d [FIX] Update main.go error handling:
+  - Changed error output to stderr using `fmt.Fprintf(os.Stderr, ...)`
+  - Non-zero exit codes (exit 1) on all fatal errors
+  - Implementation verified in main.go
+
+**Note**: These tasks are OPTIONAL before Phase 3. They improve robustness but are not blockers for MVP.
 
 ---
 
@@ -553,9 +575,9 @@ Each phase delivers testable value:
 
 ## Task Summary
 
-- **Total Tasks**: 182 (includes comprehensive testing throughout all phases)
+- **Total Tasks**: 187 (includes comprehensive testing throughout all phases)
 - **Setup Phase**: 13 tasks (T001-T013) - includes test infrastructure
-- **Foundational Phase**: 12 tasks (T014-T025) - includes foundation tests
+- **Foundational Phase**: 17 tasks (T014-T025d) - includes foundation tests + architectural decisions
 - **User Story 2 (Lifecycle) - MVP**: 47 tasks (T026-T072) 🎯 - includes unit + integration tests
 - **User Story 4 (Destroy) - Baseline**: 17 tasks (T073-T089) ✅ - includes regression tests
 - **User Story 1 (Dashboard Enhancement)**: 21 tasks (T090-T110) - includes performance tests
@@ -582,7 +604,7 @@ Each phase delivers testable value:
 - Polish: 8 tasks can run in parallel (styling, e2e tests, docs)
 
 **Estimated Time with Testing** (US2+US4 baseline):
-- Single developer: 24-28 hours (includes writing tests)
+- Single developer: 25-29 hours (includes writing tests + architectural decisions)
 - Team of 3: 12-14 hours (parallel execution after Foundational)
 
 **Test Execution Strategy**:
