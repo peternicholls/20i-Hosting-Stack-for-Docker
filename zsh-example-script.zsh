@@ -94,7 +94,8 @@ fi
 alias 20i='20i-status'
 alias dcu='20i-up'
 alias dcd='20i-down'
+
 # GUI script shortcut - interactive menu for 20i stack management
-20i-gui() {
+function 20i-gui() {
     "$STACK_HOME/20i-gui" "$@"
 }
