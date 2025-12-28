@@ -1,4 +1,4 @@
-# Feature Specification: Dependency Scanning
+# Feature Specification: Dependency Scanning (CI / Maintainer Guardrails)
 
 **Feature Branch**: `014-dependency-scanning`  
 **Created**: 2025-12-28  
@@ -6,15 +6,36 @@
 **Priority**: 🟡 High  
 **Input**: User description: "Detect vulnerable base images and dependencies with automated security scanning"
 
+## Product Contract *(mandatory)*
+
+Dependency scanning is a **maintainer-facing CI guardrail**, not a runtime feature.
+
+### Scope
+
+- Scanning applies to the **20i stack repository and images**, not to user projects.
+- Scanning MUST run in CI (e.g. GitHub Actions) and MUST NOT run inside the local stack or TUI.
+- The 20i runtime MUST NOT perform vulnerability scanning on user machines.
+
+### Responsibility boundaries
+
+- The 20i project is responsible for the security posture of its **base images and Dockerfiles**.
+- User applications and dependencies remain the responsibility of the application and hosting environment.
+- Scan results are informational and gating for maintainers only.
+
+### Determinism and noise control
+
+- Scan results MUST be reproducible for a given image digest and vulnerability database snapshot.
+- The project MUST provide a controlled allowlist mechanism for known false positives.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Automated Weekly Security Scans (Priority: P1)
 
-As a maintainer, I want automated weekly scans of stack images so that vulnerabilities are detected before users are affected.
+As a maintainer, I want automated weekly CI scans of stack images so that vulnerabilities are detected before users are affected.
 
 **Why this priority**: Proactive vulnerability detection is the core security value of this feature.
 
-**Independent Test**: Trigger the scanning workflow, verify it scans PHP-FPM Dockerfile and base images, and reports findings.
+**Independent Test**: Trigger CI scanning workflow, verify it scans stack Dockerfiles and base images and publishes a vulnerability report artifact.
 
 **Acceptance Scenarios**:
 
@@ -34,15 +55,20 @@ As a maintainer, I want PRs that introduce critical vulnerabilities to be blocke
 
 **Acceptance Scenarios**:
 
-1. **Given** a PR changes Dockerfile base image, **When** PR scan detects critical vulnerability, **Then** PR status check fails
+1. **Given** a PR changes Dockerfile base image, **When** PR scan detects critical vulnerability, **Then** PR status check fails according to the configured severity threshold (default: critical only)
 2. **Given** PR scan finds no critical vulnerabilities, **When** scan completes, **Then** PR status check passes
 3. **Given** vulnerability is in allowed list (false positive), **When** PR scan runs, **Then** vulnerability is ignored and check passes
+
+#### PR gating policy
+
+- Only vulnerabilities at or above the configured severity threshold MUST block merges.
+- Lower-severity findings MUST be reported but MUST NOT block by default.
 
 ---
 
 ### User Story 3 - Vulnerability Report in PR Comments (Priority: P3)
 
-As a maintainer reviewing PRs, I want vulnerability summaries as PR comments so that I understand the security impact without leaving GitHub.
+As a maintainer reviewing PRs, I want vulnerability summaries posted as PR comments so that security impact is visible without leaving GitHub.
 
 **Why this priority**: Inline comments improve review workflow but aren't required for blocking.
 
@@ -74,10 +100,11 @@ As a maintainer, I want clear upgrade paths for detected vulnerabilities so that
 
 ### Edge Cases
 
-- What happens when vulnerability database is unavailable?
-- How does the system handle false positives (known safe vulnerabilities)?
-- What happens when scan times out on large images?
-- How are vulnerabilities in development-only dependencies handled?
+- Vulnerability database unavailable (scan must fail gracefully or retry; PR must not be merged silently)
+- Scan exceeds CI time limits (must fail with actionable diagnostics)
+- False positives detected (must be suppressible via allowlist with justification)
+- Vulnerabilities present only in dev/test layers (must be clearly labeled)
+- Multi-arch images produce differing results (must report per-architecture findings)
 
 ## Requirements *(mandatory)*
 
@@ -92,12 +119,20 @@ As a maintainer, I want clear upgrade paths for detected vulnerabilities so that
 - **FR-007**: System MUST support vulnerability allowlist for false positives
 - **FR-008**: System MUST include fix recommendations in vulnerability reports
 - **FR-009**: System MUST use established scanning tools (Trivy, Grype, or similar)
+- **FR-010**: Dependency scanning MUST run only in CI workflows and MUST NOT execute as part of the local stack runtime or TUI
+- **FR-011**: Scan configuration, allowlists, and thresholds MUST live in the stack repository and MUST NOT affect user projects
 
 ### Key Entities
 
-- **Vulnerability Scan**: Automated security analysis of Docker images and Dockerfiles
-- **CVE Report**: Detailed list of detected vulnerabilities with IDs, severity, and remediation info
-- **Allowlist**: Configuration of known-safe vulnerabilities to ignore in scans
+- **Vulnerability Scan**: CI-based security analysis of 20i stack Dockerfiles and built images
+- **CVE Report**: Maintainer-facing report listing detected vulnerabilities with severity and remediation guidance
+- **Allowlist**: Repository-managed configuration for suppressing known false positives with documented rationale
+
+## Non-goals *(mandatory)*
+
+- This feature does NOT scan user application code or dependencies.
+- This feature does NOT run on end-user machines or inside the TUI.
+- This feature does NOT guarantee zero vulnerabilities; it provides visibility and guardrails.
 
 ## Success Criteria *(mandatory)*
 
@@ -105,9 +140,9 @@ As a maintainer, I want clear upgrade paths for detected vulnerabilities so that
 
 - **SC-001**: Weekly scans complete within 15 minutes
 - **SC-002**: 100% of PRs modifying Dockerfiles are scanned before merge
-- **SC-003**: Zero critical vulnerabilities merged to main branch
+- **SC-003**: No PRs introducing vulnerabilities above the configured severity threshold are merged to main
 - **SC-004**: Vulnerability reports provide actionable fix information 90%+ of the time
-- **SC-005**: False positive rate below 5% (minimizing unnecessary blocks)
+- **SC-005**: False positive handling is documented and used sparingly, with clear justification
 
 ## Assumptions
 

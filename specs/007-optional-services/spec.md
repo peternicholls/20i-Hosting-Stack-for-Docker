@@ -20,9 +20,19 @@ Optional services are an **add-on layer** to the core stack. They MUST be:
 - Enabled optional services MUST be stored in the project’s `.20i-config.yml`.
 - User-level preferences (UI state, last-used options, caches) MUST live in `~/.20i/` and MUST NOT be stored inside project directories.
 
+### Module-aware behaviour *(mandatory)*
+
+Optional services MUST be **module-aware**.
+
+- A selected stack module (e.g. `20i`) may define which optional services exist and how they map to Compose profiles.
+- Availability of optional services MAY differ by module (e.g. a minimal module may not offer Elasticsearch).
+- Enabling/disabling services MUST remain **module-agnostic** at the CLI/TUI level (same commands), but the implementation MUST use the selected module’s definitions.
+- User-installed modules MAY live in `~/.20i/modules/`, but optional service enablement state MUST remain in the project `.20i-config.yml`.
+
 ### Service module mechanism
 
 - Each optional service MUST be defined using Docker Compose profiles, composed into the base stack without duplicating the base stack definition.
+- Compose profiles MUST be defined within the selected module’s Compose file(s) (module-local).
 - The mechanism MUST work in both CLI and TUI using the shared stack engine.
 
 #### Composition strategy
@@ -30,6 +40,17 @@ Optional services are an **add-on layer** to the core stack. They MUST be:
 - Docker Compose profiles are the canonical mechanism for optional services.
 - Enabling a service maps to activating one or more Compose profiles.
 - The stack engine MUST translate enabled services into the appropriate `--profile` selections when invoking `docker compose`.
+
+#### Resolution flow
+
+When starting the stack:
+
+1. Determine the selected module for the project (from `.20i-config.yml`).
+2. Load the module’s service catalog (service → Compose profile mapping).
+3. Resolve enabled services from `.20i-config.yml` (and any explicit CLI flags).
+4. Invoke `docker compose` for the module with the required `--profile` selections.
+
+If an enabled service is not available in the selected module, the system MUST refuse with an actionable message.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -78,7 +99,7 @@ As a developer, I want to see which optional services are available and which ar
 **Acceptance Scenarios**:
 
 1. **Given** a stack with Redis enabled, **When** the user runs `20i services`, **Then** Redis shows as "enabled" and other services show as "available"
-2. **Given** no optional services enabled, **When** the user runs `20i services`, **Then** all services show as "available" with descriptions
+2. **Given** no optional services enabled, **When** the user runs `20i services`, **Then** the output lists services available for the selected module with descriptions
 3. **Given** enabled services are running, **When** the user runs `20i services --status`, **Then** the output includes container status and exposed ports (health if available)
 
 ---
@@ -114,6 +135,8 @@ As a developer, I want my enabled services to be remembered across stack restart
 - Service already enabled/disabled (commands must be idempotent)
 - `--remove-data` used when volumes do not exist (must succeed safely)
 - Running `20i services --status` when Docker is unavailable (must provide actionable guidance)
+- Enabled service not supported by the selected module (must refuse and list module-supported services)
+- User switches module for a project (must require explicit re-init/migration flow; services must be re-validated)
 
 ## Requirements *(mandatory)*
 
@@ -138,7 +161,7 @@ As a developer, I want my enabled services to be remembered across stack restart
 
 - **Optional Service**: A container service that can be enabled/disabled per-project, with attributes: name, description, ports, dependencies
 - **Service Configuration**: Persistent record of enabled services in `.20i-config.yml`
-- **Service Module**: Modular compose definition for each optional service
+- **Service Module**: Module-local definition mapping an optional service to one or more Compose profiles within the selected module
 
 ## Non-goals *(mandatory)*
 

@@ -23,6 +23,14 @@ Pre-built images are an **optimization**, not a new stack behaviour. The stack M
 - Documentation MUST clearly state the canonical registry (primary) and any mirrors.
 - If authentication is required, it MUST be optional and documented.
 
+### Module compatibility *(mandatory)*
+
+Pre-built images MUST remain compatible with the planned stack **module** architecture.
+
+- Modules may provide their own Compose definitions and assets, but image selection MUST still follow the deterministic rules in this spec.
+- The launcher (CLI/TUI) SHOULD supply image-selection environment variables (e.g. `PHP_VERSION`, optional `PMA_IMAGE`) consistently across modules.
+- User-installed modules MAY live in `~/.20i/modules/`, but MUST NOT require embedding registry credentials or secrets inside modules or projects.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Start Stack with Pre-built Images (Priority: P1)
@@ -150,6 +158,7 @@ Where possible, documentation SHOULD encourage pinning by stack release tag (e.g
 - This feature does NOT change runtime semantics of the stack; it only changes how images are obtained.  
 - This feature does NOT publish private secrets or production credentials.  
 - This feature does NOT require users to have registry authentication unless they choose a private registry.  
+- This feature does NOT define the module system itself; it only guarantees that pre-built image selection remains module-agnostic and deterministic.
 
 ## Success Criteria *(mandatory)*
 
