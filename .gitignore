@@ -53,3 +53,7 @@ dist/install.sh
 # Test files
 test-site/
 demo-site/
+
+# Build artifacts
+tui/bin/
+internal/go.sum

@@ -9,6 +9,7 @@ package stack
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -154,6 +155,14 @@ func TestValidateStackFile(t *testing.T) {
 	})
 
 	t.Run("unreadable file", func(t *testing.T) {
+		// Skip on Windows and when running as root, as file permissions work differently
+		if runtime.GOOS == "windows" {
+			t.Skip("Skipping unreadable file test on Windows")
+		}
+		if os.Geteuid() == 0 {
+			t.Skip("Skipping unreadable file test when running as root")
+		}
+
 		// Create a file with no read permissions
 		unreadableFile := filepath.Join(tempDir, "unreadable.yml")
 		content := []byte("version: '3'\n")
@@ -306,6 +315,19 @@ func TestComposeRestart(t *testing.T) {
 
 		if result.Error == nil {
 			t.Error("expected error for non-existent stack file")
+		}
+	})
+
+	t.Run("execute with valid stack file", func(t *testing.T) {
+		projectDir := filepath.Join(tempDir, "test-project")
+		if err := os.MkdirAll(projectDir, 0755); err != nil {
+			t.Fatalf("failed to create project dir: %v", err)
+		}
+
+		result := ComposeRestart(composeFile, projectDir)
+		
+		if result == nil {
+			t.Error("expected non-nil result")
 		}
 	})
 }
