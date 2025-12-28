@@ -57,7 +57,7 @@ on startStack()
         set shellScript to shellScript & "export CODE_DIR='" & projectPath & "';" & return
         set shellScript to shellScript & "echo '🚀 Starting 20i stack for project: " & projectName & "';" & return
         set shellScript to shellScript & "echo '📁 Code directory: " & projectPath & "';" & return
-        set shellScript to shellScript & "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' up -d;" & return
+        set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" up -d;" & return
         set shellScript to shellScript & "echo '✅ Stack started! Access your site at: http://localhost';" & return
         set shellScript to shellScript & "echo '🔧 phpMyAdmin: http://localhost:8081';"
         
@@ -99,7 +99,7 @@ on stopStack()
         
         set shellScript to "export COMPOSE_PROJECT_NAME='" & projectName & "';" & return
         set shellScript to shellScript & "echo '🛑 Stopping 20i stack: " & projectName & "';" & return
-        set shellScript to shellScript & "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' down;" & return
+        set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" down;" & return
         set shellScript to shellScript & "echo '✅ Stack stopped: " & projectName & "';"
         
         tell application "Terminal"
@@ -118,7 +118,7 @@ end stopStack
 on viewStatus()
     try
         set shellScript to "echo '📊 20i Stack Status:';" & return
-        set shellScript to shellScript & "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' ps;" & return
+        set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" ps;" & return
         set shellScript to shellScript & "echo '';" & return
         set shellScript to shellScript & "echo '🐳 All Docker containers:';" & return
         set shellScript to shellScript & "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' | head -20"
@@ -158,7 +158,7 @@ on viewLogs()
         set shellScript to "export COMPOSE_PROJECT_NAME='" & projectName & "';" & return
         set shellScript to shellScript & "echo '📋 Viewing logs for: " & projectName & "';" & return
         set shellScript to shellScript & "echo 'Press Ctrl+C to stop following logs';" & return
-        set shellScript to shellScript & "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' logs -f"
+        set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" logs -f"
         
         tell application "Terminal"
             activate

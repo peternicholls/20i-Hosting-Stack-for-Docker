@@ -48,7 +48,7 @@ on startStack()
     
     set shellScript to shellScript & "export COMPOSE_PROJECT_NAME=\"$(basename '" & projectPath & "')\" && "
     set shellScript to shellScript & "export CODE_DIR='" & projectPath & "' && "
-    set shellScript to shellScript & "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' up -d"
+    set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" up -d"
     
     # Execute in Terminal
     tell application "Terminal"

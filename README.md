@@ -22,8 +22,9 @@ dcd          # Stop stack
 ```bash
 cd /path/to/your/project
 export CODE_DIR=$(pwd)
-export COMPOSE_PROJECT_NAME=$(basename $(pwd))
-docker compose -f $HOME/docker/20i-stack/docker-compose.yml up -d
+export COMPOSE_PROJECT_NAME=$(basename "$(pwd)")
+cp .env.example .env   # edit .env if needed
+docker compose up -d
 ```
 
 ## Features
