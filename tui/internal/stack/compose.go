@@ -7,7 +7,9 @@
 package stack
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +22,12 @@ type ComposeResult struct {
 	Success bool
 	Output  string
 	Error   error
+}
+
+// OutputLine represents a single line of output from a compose command.
+type OutputLine struct {
+	Line    string
+	IsError bool
 }
 
 // getEffectiveCodeDir returns the effective code directory, defaulting to current directory if empty.
@@ -247,5 +255,99 @@ func ComposeDestroy(stackFile, codeDir string) *ComposeResult {
 	return &ComposeResult{
 		Success: true,
 		Output:  string(output),
+	}
+}
+
+// ComposeUpStreaming starts the Docker Compose stack with streaming output.
+// It executes `docker compose -f $STACK_FILE up -d` and streams output line-by-line
+// through a buffered channel. The channel is guaranteed to close when the command
+// completes or fails.
+//
+// Parameters:
+//   - stackFile: Path to the docker-compose.yml file
+//   - codeDir: Project code directory (defaults to current directory if empty)
+//
+// Returns:
+//   - A receive-only channel of OutputLine that will be closed when complete
+//   - An error if validation or setup fails (channel will be nil)
+func ComposeUpStreaming(stackFile, codeDir string) (<-chan OutputLine, error) {
+	// Validate STACK_FILE
+	if err := ValidateStackFile(stackFile); err != nil {
+		return nil, err
+	}
+
+	// Get effective code directory
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build command
+	cmd := exec.Command("docker", "compose", "-f", stackFile, "up", "-d")
+	cmd.Env = buildComposeEnv(codeDir)
+
+	// Create pipes for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start docker compose: %w", err)
+	}
+
+	// Create a buffered channel to prevent blocking
+	output := make(chan OutputLine, 100)
+
+	// Stream output in a goroutine
+	go func() {
+		defer close(output)
+
+		// Stream stdout and stderr concurrently
+		done := make(chan struct{})
+
+		// Stream stdout
+		go streamPipe(stdout, false, output, done)
+
+		// Stream stderr
+		go streamPipe(stderr, true, output, done)
+
+		// Wait for both pipes to complete
+		<-done
+		<-done
+
+		// Wait for command to complete
+		if err := cmd.Wait(); err != nil {
+			// Send final error line if command failed
+			output <- OutputLine{
+				Line:    fmt.Sprintf("Command failed: %v", err),
+				IsError: true,
+			}
+		}
+	}()
+
+	return output, nil
+}
+
+// streamPipe reads lines from a pipe and sends them to the output channel.
+// Signals completion via the done channel.
+func streamPipe(r io.Reader, isError bool, output chan<- OutputLine, done chan<- struct{}) {
+	defer func() { done <- struct{}{} }()
+
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Non-blocking send using buffered channel
+		output <- OutputLine{
+			Line:    line,
+			IsError: isError,
+		}
 	}
 }

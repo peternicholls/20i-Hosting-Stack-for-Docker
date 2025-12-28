@@ -10,31 +10,50 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/peternicholls/20i-stack/tui/internal/docker"
+	"github.com/peternicholls/20i-stack/tui/internal/stack"
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
+)
+
+// rightPanelState tracks what content to show in the right panel
+type rightPanelState int
+
+const (
+	rightPanelStatus rightPanelState = iota
+	rightPanelOutput
 )
 
 // Model represents the dashboard view state for Phase 3.
 type Model struct {
-	containers    []docker.Container
-	selectedIndex int
-	projectName   string
-	dockerClient  *docker.Client
-	width         int
-	height        int
-	lastError     error
-	lastStatusMsg string
+	containers      []docker.Container
+	selectedIndex   int
+	projectName     string
+	dockerClient    *docker.Client
+	width           int
+	height          int
+	lastError       error
+	lastStatusMsg   string
+	outputViewport  viewport.Model
+	outputBuffer    []string
+	outputComplete  bool
+	rightPanelState rightPanelState
 }
 
 // NewModel creates a dashboard model with required dependencies.
 func NewModel(client *docker.Client, projectName string) Model {
+	vp := viewport.New(50, 20)
+	vp.SetContent("")
+	
 	return Model{
-		dockerClient: client,
-		projectName:  projectName,
-		width:        80,
-		height:       24,
+		dockerClient:    client,
+		projectName:     projectName,
+		width:           80,
+		height:          24,
+		outputViewport:  vp,
+		rightPanelState: rightPanelStatus,
 	}
 }
 
@@ -107,6 +126,40 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.selectedIndex = clampIndex(len(m.containers) - 1)
 		}
 		m.lastError = nil
+
+	case StackOutputMsg:
+		// Append output line to buffer
+		m.outputBuffer = append(m.outputBuffer, msg.Line)
+		
+		// Update viewport content
+		m.outputViewport.SetContent(strings.Join(m.outputBuffer, "\n"))
+		
+		// Scroll to bottom
+		m.outputViewport.GotoBottom()
+		
+		return m, nil
+
+	case composeOutputCompleteMsg:
+		// Mark output as complete
+		m.outputComplete = true
+		
+		// Add completion marker (empty line, then completion)
+		m.outputBuffer = append(m.outputBuffer, "", "[Complete]")
+		m.outputViewport.SetContent(strings.Join(m.outputBuffer, "\n"))
+		m.outputViewport.GotoBottom()
+		
+		// Refresh container list and switch to status view
+		return m, tea.Batch(
+			loadContainersCmd(m.dockerClient, m.projectName),
+			func() tea.Msg {
+				return switchToStatusMsg{}
+			},
+		)
+
+	case switchToStatusMsg:
+		// Switch right panel back to status
+		m.rightPanelState = rightPanelStatus
+		return m, nil
 	}
 
 	return m, nil
@@ -126,14 +179,19 @@ func (m Model) View() string {
 	// Render service list (left panel, 30%)
 	serviceList := renderServiceList(m.containers, m.selectedIndex, serviceListWidth, panelHeight)
 
-	// Render status messages panel (right panel, 70%)
-	statusPanel := m.renderStatusPanel(statusPanelWidth, panelHeight)
+	// Render right panel based on state
+	var rightPanel string
+	if m.rightPanelState == rightPanelOutput {
+		rightPanel = m.renderOutputPanel(statusPanelWidth, panelHeight)
+	} else {
+		rightPanel = m.renderStatusPanel(statusPanelWidth, panelHeight)
+	}
 
 	// Join horizontally
 	mainContent := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		serviceList,
-		statusPanel,
+		rightPanel,
 	)
 
 	// Render footer
@@ -178,6 +236,25 @@ func (m Model) renderFooter() string {
 	return ui.FooterStyle.Width(m.width).Render(shortcuts)
 }
 
+// renderOutputPanel renders the output streaming viewport.
+func (m Model) renderOutputPanel(width, height int) string {
+	// Update viewport dimensions
+	m.outputViewport.Width = width - 4
+	m.outputViewport.Height = height - 4
+	
+	// Render viewport content
+	viewportContent := m.outputViewport.View()
+	
+	// Wrap in border
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ui.ColorBorder).
+		Width(width-4).
+		Height(height-2).
+		Padding(1, 2).
+		Render(viewportContent)
+}
+
 // getSelectedContainerName returns the name of the currently selected container.
 func (m Model) getSelectedContainerName() string {
 	if m.selectedIndex >= 0 && m.selectedIndex < len(m.containers) {
@@ -211,6 +288,18 @@ type containerListMsg struct {
 	containers []docker.Container
 	err        error
 }
+
+// StackOutputMsg sent when streaming compose command output
+type StackOutputMsg struct {
+	Line    string
+	IsError bool
+}
+
+// composeOutputCompleteMsg signals that compose output streaming has completed.
+type composeOutputCompleteMsg struct{}
+
+// switchToStatusMsg signals that the right panel should switch to status view.
+type switchToStatusMsg struct{}
 
 // containerActionResultMsg is returned after a container action command completes.
 type containerActionResultMsg struct {
@@ -282,4 +371,47 @@ func formatDockerError(err error, action, containerName string) string {
 
 	// Generic fallback
 	return fmt.Sprintf("❌ Failed to %s '%s': %s", action, containerName, err)
+}
+
+// ComposeOutputCmd creates a tea.Cmd that subscribes to compose output streaming.
+// It reads from the output channel and sends StackOutputMsg for each line,
+// then sends composeOutputCompleteMsg when the channel closes.
+func ComposeOutputCmd(stackFile, codeDir string) tea.Cmd {
+	return func() tea.Msg {
+		// Start streaming
+		outputCh, err := stack.ComposeUpStreaming(stackFile, codeDir)
+		if err != nil {
+			// Return error as StackOutputMsg
+			return StackOutputMsg{
+				Line:    fmt.Sprintf("Failed to start compose: %v", err),
+				IsError: true,
+			}
+		}
+
+		// Subscribe to output channel
+		return subscribeToOutputCmd(outputCh)
+	}
+}
+
+// subscribeToOutputCmd returns a command that reads from the output channel.
+func subscribeToOutputCmd(outputCh <-chan stack.OutputLine) tea.Cmd {
+	return func() tea.Msg {
+		// Read next line from channel
+		line, ok := <-outputCh
+		if !ok {
+			// Channel closed, streaming complete
+			return composeOutputCompleteMsg{}
+		}
+
+		// Convert to StackOutputMsg and continue reading
+		return tea.Batch(
+			func() tea.Msg {
+				return StackOutputMsg{
+					Line:    line.Line,
+					IsError: line.IsError,
+				}
+			},
+			subscribeToOutputCmd(outputCh),
+		)
+	}
 }

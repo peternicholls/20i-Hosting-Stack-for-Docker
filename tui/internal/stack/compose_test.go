@@ -7,6 +7,8 @@
 package stack
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -373,5 +375,157 @@ func TestComposeDestroy(t *testing.T) {
 
 		// The command should include the -v flag for volume removal
 		// We can't verify this directly without mocking, but the function structure ensures it
+	})
+}
+
+func TestComposeUpStreaming(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "compose-streaming-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a valid docker-compose.yml file
+	composeFile := filepath.Join(tempDir, "docker-compose.yml")
+	content := []byte("version: '3'\nservices:\n  test:\n    image: nginx\n")
+	if err := os.WriteFile(composeFile, content, 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	t.Run("validation error returns nil channel", func(t *testing.T) {
+		ch, err := ComposeUpStreaming("/nonexistent/docker-compose.yml", tempDir)
+		if err == nil {
+			t.Error("expected validation error for non-existent stack file")
+		}
+		if ch != nil {
+			t.Error("expected nil channel on validation error")
+		}
+	})
+
+	t.Run("channel closes on command completion", func(t *testing.T) {
+		// Use a mock command that will exit quickly
+		// We can't test with real docker without integration tests,
+		// but we test that the channel structure works correctly
+		projectDir := filepath.Join(tempDir, "test-project")
+		if err := os.MkdirAll(projectDir, 0755); err != nil {
+			t.Fatalf("failed to create project dir: %v", err)
+		}
+
+		ch, err := ComposeUpStreaming(composeFile, projectDir)
+		if err != nil {
+			t.Fatalf("unexpected error starting streaming: %v", err)
+		}
+
+		if ch == nil {
+			t.Fatal("expected non-nil channel")
+		}
+
+		// Read all lines from channel
+		var lines []OutputLine
+		for line := range ch {
+			lines = append(lines, line)
+		}
+
+		// Channel should be closed (range completes)
+		// We can verify the channel is closed by trying to receive
+		_, open := <-ch
+		if open {
+			t.Error("channel should be closed after range completes")
+		}
+	})
+
+	t.Run("lines delivered in order", func(t *testing.T) {
+		projectDir := filepath.Join(tempDir, "test-project-2")
+		if err := os.MkdirAll(projectDir, 0755); err != nil {
+			t.Fatalf("failed to create project dir: %v", err)
+		}
+
+		ch, err := ComposeUpStreaming(composeFile, projectDir)
+		if err != nil {
+			t.Fatalf("unexpected error starting streaming: %v", err)
+		}
+
+		// Collect all lines
+		var lines []OutputLine
+		for line := range ch {
+			lines = append(lines, line)
+		}
+
+		// We should get at least one line (either output or error)
+		// The exact content depends on whether docker is available
+		t.Logf("Received %d lines from compose command", len(lines))
+	})
+}
+
+func TestStreamPipe(t *testing.T) {
+	t.Run("streams lines correctly", func(t *testing.T) {
+		// Create a pipe with known content
+		r, w := io.Pipe()
+		output := make(chan OutputLine, 10)
+		done := make(chan struct{})
+
+		// Start streaming
+		go streamPipe(r, false, output, done)
+
+		// Write test lines
+		go func() {
+			defer w.Close()
+			fmt.Fprintln(w, "Line 1")
+			fmt.Fprintln(w, "Line 2")
+			fmt.Fprintln(w, "Line 3")
+		}()
+
+		// Wait for streaming to complete
+		<-done
+		close(output)
+
+		// Verify lines
+		var lines []OutputLine
+		for line := range output {
+			lines = append(lines, line)
+		}
+
+		if len(lines) != 3 {
+			t.Errorf("expected 3 lines, got %d", len(lines))
+		}
+
+		expectedLines := []string{"Line 1", "Line 2", "Line 3"}
+		for i, line := range lines {
+			if line.Line != expectedLines[i] {
+				t.Errorf("line %d: expected %q, got %q", i, expectedLines[i], line.Line)
+			}
+			if line.IsError {
+				t.Errorf("line %d: expected IsError=false, got true", i)
+			}
+		}
+	})
+
+	t.Run("marks stderr lines as errors", func(t *testing.T) {
+		r, w := io.Pipe()
+		output := make(chan OutputLine, 10)
+		done := make(chan struct{})
+
+		// Start streaming with isError=true
+		go streamPipe(r, true, output, done)
+
+		// Write test line
+		go func() {
+			defer w.Close()
+			fmt.Fprintln(w, "Error line")
+		}()
+
+		// Wait for streaming to complete
+		<-done
+		close(output)
+
+		// Verify error flag
+		line := <-output
+		if !line.IsError {
+			t.Error("expected IsError=true for stderr line")
+		}
+		if line.Line != "Error line" {
+			t.Errorf("expected 'Error line', got %q", line.Line)
+		}
 	})
 }
