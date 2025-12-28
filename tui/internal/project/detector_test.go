@@ -18,14 +18,21 @@ func TestSanitizeProjectName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"empty string", "", "project"},
+		// Required spec examples
+		{"spec: My Website!", "My Website!", "my-website"},
+		{"spec: my_site!", "my_site!", "my-site"},
+		{"spec: MYSITE", "MYSITE", "mysite"},
+		{"spec: 123-test", "123-test", "test-123"},
+		{"spec: empty string", "", "project"},
+		{"spec: only hyphens", "---", "project"},
+		
+		// Additional edge cases
 		{"simple lowercase", "myproject", "myproject"},
 		{"uppercase to lowercase", "MyProject", "myproject"},
 		{"spaces to hyphens", "My Project", "my-project"},
 		{"underscores to hyphens", "test_project", "test-project"},
 		{"mixed separators", "test__project--name", "test-project-name"},
 		{"special chars", "project@#$%name", "project-name"},
-		{"leading digits moved", "123-test", "test-123"},
 		{"only digits", "123", "p123"},
 		{"leading trailing hyphens", "---test---", "test"},
 		{"complex case", "ABC--xyz__123", "abc-xyz-123"},
