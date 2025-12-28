@@ -48,7 +48,7 @@ on startStack()
     
     set shellScript to shellScript & "export COMPOSE_PROJECT_NAME=\"$(basename '" & projectPath & "')\" && "
     set shellScript to shellScript & "export CODE_DIR='" & projectPath & "' && "
-    set shellScript to shellScript & "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' up -d"
+    set shellScript to shellScript & "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" up -d"
     
     # Execute in Terminal
     tell application "Terminal"
@@ -70,7 +70,7 @@ on stopStack()
         return
     end if
     
-    set shellScript to "export COMPOSE_PROJECT_NAME='" & projectName & "' && docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' down"
+    set shellScript to "export COMPOSE_PROJECT_NAME='" & projectName & "' && STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" down"
     
     tell application "Terminal"
         activate
@@ -82,7 +82,7 @@ end stopStack
 
 # Function to view status
 on viewStatus()
-    set shellScript to "docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' ps"
+    set shellScript to "STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" ps"
     
     tell application "Terminal"
         activate
@@ -100,7 +100,7 @@ on viewLogs()
         return
     end if
     
-    set shellScript to "export COMPOSE_PROJECT_NAME='" & projectName & "' && docker compose -f '$HOME/docker/20i-stack/docker-compose.yml' logs -f"
+    set shellScript to "export COMPOSE_PROJECT_NAME='" & projectName & "' && STACK_FILE=\"${STACK_FILE:-$HOME/docker/20i-stack/docker-compose.yml}\" && docker compose -f \"$STACK_FILE\" logs -f"
     
     tell application "Terminal"
         activate

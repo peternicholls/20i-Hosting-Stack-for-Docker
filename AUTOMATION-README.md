@@ -5,7 +5,7 @@ This automation provides GUI interfaces to manage your 20i Docker stack on macOS
 ## 📱 What You Get
 
 ### 1. **20i Stack Manager.app** 
-- **Location**: `/Users/peternicholls/docker/20i-stack/20i Stack Manager.app`
+- **Location**: `./20i Stack Manager.app` (inside repo; workflows also installed to `~/Library/Services`)
 - **Usage**: Double-click to launch
 - **Features**: 
   - 🚀 Start Stack (with folder picker and settings dialog)
@@ -35,15 +35,16 @@ This automation provides GUI interfaces to manage your 20i Docker stack on macOS
 
 ## 🛠 Installation
 
-The automation is already set up! Here's what was installed:
+The automation is macOS-only. The workflows use a `STACK_FILE` environment variable and default to `$HOME/docker/20i-stack/docker-compose.yml` if `STACK_FILE` is not set — you can override this if you cloned the repo to another location.
+
+To install the Services workflow (optional):
 
 ```bash
-# Standalone App (ready to use)
-~/docker/20i-stack/20i Stack Manager.app
-
-# Services Menu (system-wide access)
-~/Library/Services/20i Stack Manager.workflow
+# Copy workflow to Services (for right-click menu access)
+cp -R "./20i Stack Manager.workflow" ~/Library/Services/
 ```
+
+The standalone app lives inside the repository at `./20i Stack Manager.app` if you prefer to run it directly.
 
 ## 🚀 Quick Start
 

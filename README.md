@@ -1,4 +1,6 @@
 # 20i Stack - Docker Development Environment
+**A reusable Docker stack based on [20i's](https://www.20i.com) shared hosting environment for PHP projects with Nginx, PHP-FPM, MariaDB, and phpMyAdmin.**
+**Perfect for**: PHP development, Laravel projects, WordPress development, prototyping, and any web project needing a quick, reliable development environment.
 
 ## Overview
 A reusable, centralized Docker development stack for PHP projects using:
@@ -12,18 +14,19 @@ A reusable, centralized Docker development stack for PHP projects using:
 ### Shell Commands (Recommended)
 ```bash
 # From any project directory:
+20i-gui      # Interactive menu
+# Aliases:
 dcu          # Start stack (uses current directory)
 dcd          # Stop stack
-20i          # View status
-20i-gui      # Interactive menu
 ```
 
 ### Manual Usage
 ```bash
 cd /path/to/your/project
 export CODE_DIR=$(pwd)
-export COMPOSE_PROJECT_NAME=$(basename $(pwd))
-docker compose -f $HOME/docker/20i-stack/docker-compose.yml up -d
+export COMPOSE_PROJECT_NAME=$(basename "$(pwd)")
+cp .env.example .env   # edit .env if needed
+docker compose up -d
 ```
 
 ## Features
@@ -91,23 +94,32 @@ export MYSQL_PASSWORD=projectpass
 
 ## Shell Integration
 
-Add to your `.zshrc`:
+The easiest way to integrate with your shell is to source the provided example script:
 
 ```bash
-# 20i stack configuration
-STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+# Add to your .zshrc or .bashrc:
+source /path/to/20i-stack/zsh-example-script.zsh
+```
 
-# Functions (see copy of zshrc.txt for full implementations)
-20i-up() { ... }     # Start stack
-20i-down() { ... }   # Stop stack
-20i-status() { ... } # View status
-20i-logs() { ... }   # View logs
+**For zsh users**: Copy the script to your home directory for easier access:
+```bash
+cp /path/to/20i-stack/zsh-example-script.zsh ~/.20i-stack.zsh
+echo "source ~/.20i-stack.zsh" >> ~/.zshrc
+```
 
-# Aliases
-alias 20i='20i-status'
-alias dcu='20i-up'
-alias dcd='20i-down'
-alias 20i-gui='$STACK_HOME/20i-gui'
+This provides convenient commands:
+- `20i-up` - Start stack for current directory
+- `20i-down` - Stop stack
+- `20i-status` (or just `20i`) - View status
+- `20i-logs` - Follow logs
+- `20i-destroy` - Destroy stack and volumes (with confirmation)
+- `20i-gui` - Launch interactive menu
+- `dcu` / `dcd` - Aliases for up/down
+
+**Optional**: Customize the stack location by setting environment variables before sourcing:
+```bash
+export STACK_FILE=/custom/path/docker-compose.yml  # Or set STACK_HOME
+source ~/.20i-stack.zsh
 ```
 
 ## Workflow Examples
@@ -150,10 +162,17 @@ dcu
 
 ### Database Issues
 ```bash
-# Reset database
+# Reset database (or use 20i-destroy for complete cleanup)
 dcd
 docker volume rm $(docker volume ls -q | grep db_data)
 dcu
+```
+
+### Destroy Stack Completely
+```bash
+# WARNING: This removes all data including database volumes!
+20i-destroy           # Prompts for confirmation
+# Or from GUI: Choose option 6
 ```
 
 ### View Logs
@@ -174,4 +193,4 @@ MIT License - Use freely for development purposes.
 
 ---
 
-**Perfect for**: PHP development, Laravel projects, WordPress development, prototyping, and any web project needing a quick, reliable development environment.
+

@@ -4,8 +4,15 @@
 # A simple dialog-based interface for managing 20i Docker stacks
 # Usage: 20i-gui
 
-STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
-STACK_FILE="$STACK_HOME/docker-compose.yml"
+# Determine STACK_FILE and STACK_HOME
+if [[ -n "${STACK_FILE:-}" ]]; then
+    # STACK_FILE is explicitly set
+    STACK_HOME="${STACK_HOME:-$(cd "$(dirname "$STACK_FILE")" 2>/dev/null && pwd)}"
+else
+    # Default: use STACK_HOME or fall back
+    STACK_HOME="${STACK_HOME:-$HOME/docker/20i-stack}"
+    STACK_FILE="$STACK_HOME/docker-compose.yml"
+fi
 
 # Check if stack directory exists
 if [[ ! -f "$STACK_FILE" ]]; then
@@ -18,12 +25,13 @@ show_menu() {
     if command -v dialog >/dev/null 2>&1; then
         # Use dialog if available (prettier interface)
         dialog --clear --title "20i Stack Manager" \
-               --menu "Choose an action:" 15 50 5 \
+               --menu "Choose an action:" 18 50 6 \
                1 "🚀 Start Stack (current directory)" \
                2 "🛑 Stop Stack" \
                3 "🔁 Restart Stack" \
                4 "📊 View Status" \
-               5 "📋 View Logs" 2>/tmp/menu_choice
+               5 "📋 View Logs" \
+               6 "💥 Destroy Stack (removes volumes!)" 2>/tmp/menu_choice
         
         if [[ $? -eq 0 ]]; then
             choice=$(cat /tmp/menu_choice)
@@ -38,9 +46,10 @@ show_menu() {
         echo "=================="
         echo "1) 🚀 Start Stack (current directory)"
         echo "2) 🛑 Stop Stack"
-        echo "3) � Restart Stack"
+        echo "3) 🔁 Restart Stack"
         echo "4) 📊 View Status"
         echo "5) 📋 View Logs"
+        echo "6) 💥 Destroy Stack (removes volumes!)"
         echo "q) Quit"
         echo
         read -p "Choose an option: " choice
@@ -56,6 +65,7 @@ show_menu() {
         3) restart_stack ;;
         4) view_status ;;
         5) view_logs ;;
+        6) destroy_stack ;;
         *) echo "❌ Invalid choice"; exit 1 ;;
     esac
 }
@@ -195,7 +205,7 @@ start_stack() {
 # Function to stop stack
 stop_stack() {
     # Get list of running compose projects
-    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
     
     if [[ -z "$running_projects" ]]; then
         echo "ℹ️  No 20i stacks appear to be running"
@@ -210,6 +220,7 @@ stop_stack() {
     
     if [[ "$choice" == "a" ]]; then
         echo "🛑 Stopping all 20i stacks..."
+        export CODE_DIR="$(pwd)"
         echo "$running_projects" | while read project; do
             if [[ -n "$project" ]]; then
                 echo "Stopping $project..."
@@ -220,6 +231,7 @@ stop_stack() {
         local project=$(echo "$running_projects" | sed -n "${choice}p")
         if [[ -n "$project" ]]; then
             echo "🛑 Stopping stack: $project"
+            export CODE_DIR="$(pwd)"
             COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" down
             echo "✅ Stack stopped: $project"
         else
@@ -240,13 +252,17 @@ restart_stack() {
         echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
     fi
 
+    # Export required variables
+    export CODE_DIR="$PROJECT_DIR"
+    export COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME"
+
     # Check if the project has running containers
     if [[ -n "$(COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" ps -q 2>/dev/null)" ]]; then
         echo "♻️  Project appears to be running — restarting containers..."
-        COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" restart && echo "✅ Restarted: $SAFE_PROJECT_NAME" || echo "❌ Restart failed"
+        docker compose -f "$STACK_FILE" restart && echo "✅ Restarted: $SAFE_PROJECT_NAME" || echo "❌ Restart failed"
     else
         echo "⬇️  Project not running — starting stack..."
-        COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" up -d && echo "✅ Started: $SAFE_PROJECT_NAME" || echo "❌ Start failed"
+        docker compose -f "$STACK_FILE" up -d && echo "✅ Started: $SAFE_PROJECT_NAME" || echo "❌ Start failed"
     fi
 }
 
@@ -259,13 +275,13 @@ view_status() {
     docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | head -20
     echo
     echo "📈 Docker Compose projects:"
-    docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u | nl
+    docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u | nl
 }
 
 # Function to view logs
 view_logs() {
     # Get list of running compose projects
-    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '^[^-]+-[^-]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
     
     if [[ -z "$running_projects" ]]; then
         echo "ℹ️  No 20i stacks appear to be running"
@@ -281,7 +297,48 @@ view_logs() {
     local project=$(echo "$running_projects" | sed -n "${choice}p")
     if [[ -n "$project" ]]; then
         echo "📋 Viewing logs for: $project (Press Ctrl+C to stop)"
+        export CODE_DIR="$(pwd)"
         COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" logs -f
+    else
+        echo "❌ Invalid selection"
+        exit 1
+    fi
+}
+
+# Function to destroy stack (stop and remove volumes)
+destroy_stack() {
+    # Get list of running compose projects
+    local running_projects=$(docker ps --format 'table {{.Names}}' | grep -E '.+-[a-z0-9]+-[0-9]+$' | sed 's/-[^-]*-[0-9]*$//' | sort -u)
+    
+    if [[ -z "$running_projects" ]]; then
+        echo "ℹ️  No 20i stacks appear to be running"
+        return 0
+    fi
+    
+    echo "💥 Running 20i stacks:"
+    echo "$running_projects" | nl
+    echo
+    
+    read -p "Enter project number to destroy: " choice
+    
+    local project=$(echo "$running_projects" | sed -n "${choice}p")
+    if [[ -n "$project" ]]; then
+        echo ""
+        echo "⚠️  WARNING: This will DESTROY the stack: $project"
+        echo "    - Stop all containers"
+        echo "    - Remove all volumes (database data will be LOST!)"
+        echo "    - Remove networks"
+        echo ""
+        read -p "Are you sure? (type 'yes' to confirm): " confirmation
+        
+        if [[ "$confirmation" == "yes" ]]; then
+            echo "💥 Destroying stack: $project"
+            export CODE_DIR="$(pwd)"
+            COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" down -v
+            echo "✅ Stack destroyed: $project"
+        else
+            echo "❌ Destroy cancelled"
+        fi
     else
         echo "❌ Invalid selection"
         exit 1

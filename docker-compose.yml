@@ -20,10 +20,10 @@ services:
   mariadb:
     image: mariadb:${MYSQL_VERSION:-10.6}
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: devdb
-      MYSQL_USER: devuser
-      MYSQL_PASSWORD: devpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-devdb}
+      MYSQL_USER: ${MYSQL_USER:-devuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-devpass}
     volumes:
       - db_data:/var/lib/mysql
     ports: ["${MYSQL_PORT:-3306}:3306"]
