@@ -47,9 +47,8 @@ specs/004-release-workflow/
 ├── data-model.md        # Phase 1: VERSION format, config schema
 ├── quickstart.md        # Phase 1: Maintainer release guide
 ├── contracts/           # Phase 1: Workflow API specifications
-│   ├── release-workflow.yml    # Main release workflow interface
-│   ├── validate-pr.yml         # PR validation interface
-│   └── events.md               # Workflow dispatch events
+│   ├── release-workflow.md     # Main release workflow interface
+│   └── events.md               # Workflow events specification
 └── tasks.md             # Phase 2 output (via /speckit.tasks)
 ```
 
@@ -92,3 +91,42 @@ README.md                        # Existing - add version badge
 ## Complexity Tracking
 
 > No constitution violations - section not required.
+
+---
+
+## Post-Design Constitution Re-Check
+
+*Re-evaluated after Phase 1 design completion.*
+
+| Principle | Pre-Design | Post-Design | Notes |
+|-----------|------------|-------------|-------|
+| I. Environment-Driven Configuration | ✅ PASS | ✅ PASS | Confirmed: VERSION file, workflow inputs, release-please config |
+| II. Multi-Platform First | ✅ PASS | ✅ PASS | Confirmed: ubuntu-latest runners, platform-agnostic artifacts |
+| III. Path Independence | ✅ PASS | ✅ PASS | Confirmed: All scripts use relative paths, GITHUB_WORKSPACE |
+| IV. Centralized Defaults | ✅ PASS | ✅ PASS | Confirmed: release-please-config.json centralizes settings |
+| V. User Experience & Feedback | ✅ PASS | ✅ PASS | Confirmed: PR preview comments, release notes, status badges |
+| VI. Documentation as First-Class | ✅ PASS | ✅ PASS | Confirmed: Auto CHANGELOG, quickstart.md, inline comments |
+| VII. Version Consistency | ✅ PASS | ✅ PASS | Confirmed: VERSION → tag → CHANGELOG → README badge |
+| Commit Hygiene | ✅ PASS | ✅ PASS | Confirmed: validate-pr.yml enforces conventional commits |
+
+**Post-Design Gate**: ✅ PASSED - Design maintains full compliance
+
+### Design Decisions Aligned with Constitution
+
+1. **release-please over semantic-release**: Simpler, no Node.js dependency (Principle I, III)
+2. **VERSION file over package.json**: Language-agnostic, shell-script friendly (Principle III)
+3. **Separate scripts/release/**: Testable outside CI, reusable (Principle VI)
+4. **SHA256 checksums**: Security verification for artifacts (best practice)
+5. **PR-based releases**: Maintainer control, clear audit trail (Principle V)
+
+---
+
+## Phase 2 Planning (via /speckit.tasks)
+
+The following areas are ready for task breakdown:
+
+1. **Workflow Implementation**: Create GitHub Actions YAML files
+2. **Script Development**: Build release utility scripts
+3. **Configuration Files**: Set up release-please config
+4. **Documentation Updates**: README badges, CONTRIBUTING guide
+5. **Testing**: Workflow validation, script testing
