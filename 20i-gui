@@ -217,6 +217,7 @@ stop_stack() {
     
     if [[ "$choice" == "a" ]]; then
         echo "🛑 Stopping all 20i stacks..."
+        export CODE_DIR="$(pwd)"
         echo "$running_projects" | while read project; do
             if [[ -n "$project" ]]; then
                 echo "Stopping $project..."
@@ -227,6 +228,7 @@ stop_stack() {
         local project=$(echo "$running_projects" | sed -n "${choice}p")
         if [[ -n "$project" ]]; then
             echo "🛑 Stopping stack: $project"
+            export CODE_DIR="$(pwd)"
             COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" down
             echo "✅ Stack stopped: $project"
         else
@@ -247,13 +249,17 @@ restart_stack() {
         echo "📛 Normalized project name: $SAFE_PROJECT_NAME"
     fi
 
+    # Export required variables
+    export CODE_DIR="$PROJECT_DIR"
+    export COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME"
+
     # Check if the project has running containers
     if [[ -n "$(COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" ps -q 2>/dev/null)" ]]; then
         echo "♻️  Project appears to be running — restarting containers..."
-        COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" restart && echo "✅ Restarted: $SAFE_PROJECT_NAME" || echo "❌ Restart failed"
+        docker compose -f "$STACK_FILE" restart && echo "✅ Restarted: $SAFE_PROJECT_NAME" || echo "❌ Restart failed"
     else
         echo "⬇️  Project not running — starting stack..."
-        COMPOSE_PROJECT_NAME="$SAFE_PROJECT_NAME" docker compose -f "$STACK_FILE" up -d && echo "✅ Started: $SAFE_PROJECT_NAME" || echo "❌ Start failed"
+        docker compose -f "$STACK_FILE" up -d && echo "✅ Started: $SAFE_PROJECT_NAME" || echo "❌ Start failed"
     fi
 }
 
@@ -288,6 +294,7 @@ view_logs() {
     local project=$(echo "$running_projects" | sed -n "${choice}p")
     if [[ -n "$project" ]]; then
         echo "📋 Viewing logs for: $project (Press Ctrl+C to stop)"
+        export CODE_DIR="$(pwd)"
         COMPOSE_PROJECT_NAME="$project" docker compose -f "$STACK_FILE" logs -f
     else
         echo "❌ Invalid selection"

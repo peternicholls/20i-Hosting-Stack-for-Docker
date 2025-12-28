@@ -39,12 +39,17 @@ fi
 
 # Function to stop 20i stack
 20i-down() {
+    local PROJECT_DIR="$(pwd)"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     if [[ ! -f "$STACK_FILE" ]]; then
         echo "❌ Error: Docker compose file not found at $STACK_FILE"
         return 1
     fi
+    
+    # Export CODE_DIR to satisfy docker-compose.yml requirements
+    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
     
     echo "🛑 Stopping 20i stack..."
     docker compose -f "$STACK_FILE" down "$@"
@@ -52,12 +57,17 @@ fi
 
 # Function to show 20i stack status
 20i-status() {
+    local PROJECT_DIR="$(pwd)"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     if [[ ! -f "$STACK_FILE" ]]; then
         echo "❌ Error: Docker compose file not found at $STACK_FILE"
         return 1
     fi
+    
+    # Export CODE_DIR to satisfy docker-compose.yml requirements
+    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
     
     echo "📊 20i stack status:"
     docker compose -f "$STACK_FILE" ps
@@ -65,12 +75,17 @@ fi
 
 # Function to view 20i stack logs
 20i-logs() {
+    local PROJECT_DIR="$(pwd)"
     local STACK_FILE="${STACK_FILE:-$STACK_HOME/docker-compose.yml}"
     
     if [[ ! -f "$STACK_FILE" ]]; then
         echo "❌ Error: Docker compose file not found at $STACK_FILE"
         return 1
     fi
+    
+    # Export CODE_DIR to satisfy docker-compose.yml requirements
+    export CODE_DIR="${CODE_DIR:-$PROJECT_DIR}"
+    export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
     
     docker compose -f "$STACK_FILE" logs -f "$@"
 }
