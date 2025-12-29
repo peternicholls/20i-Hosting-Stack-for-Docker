@@ -378,14 +378,30 @@ func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {
 // This allows non-blocking subscription to the output stream.
 func waitForNextLineCmd(outputChan <-chan string) tea.Cmd {
 	return func() tea.Msg {
-		line, ok := <-outputChan
-		if !ok {
-			// Channel closed
-			return stackOutputMsg{Line: "[Complete]", IsError: false}
+		// Guard against a nil channel, which would block forever on receive.
+		if outputChan == nil {
+			return stackOutputMsg{
+				Line:    "ERROR: compose output channel is nil",
+				IsError: true,
+			}
 		}
-		return stackOutputMsg{
-			Line:    line,
-			IsError: strings.HasPrefix(line, "ERROR:"),
+
+		// Use a timeout to avoid blocking indefinitely if the channel is never closed or written to.
+		select {
+		case line, ok := <-outputChan:
+			if !ok {
+				// Channel closed
+				return stackOutputMsg{Line: "[Complete]", IsError: false}
+			}
+			return stackOutputMsg{
+				Line:    line,
+				IsError: strings.HasPrefix(line, "ERROR:"),
+			}
+		case <-time.After(30 * time.Second):
+			return stackOutputMsg{
+				Line:    "ERROR: timed out waiting for compose output",
+				IsError: true,
+			}
 		}
 	}
 }
