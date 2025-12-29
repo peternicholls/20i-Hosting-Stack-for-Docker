@@ -390,8 +390,8 @@ func waitForNextLineCmd(outputChan <-chan string) tea.Cmd {
 		select {
 		case line, ok := <-outputChan:
 			if !ok {
-				// Channel closed
-				return stackOutputMsg{Line: "[Complete]", IsError: false}
+				// Channel closed - don't send synthetic completion as compose.go already sends it
+				return nil
 			}
 			return stackOutputMsg{
 				Line:    line,
