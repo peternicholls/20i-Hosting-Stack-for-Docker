@@ -17,6 +17,10 @@ import (
 	"github.com/peternicholls/20i-stack/tui/internal/project"
 )
 
+// Default buffer size for compose output channel.
+// Large enough to handle typical docker compose output without blocking.
+const composeOutputBufferSize = 100
+
 // ComposeResult holds the result of a compose operation.
 type ComposeResult struct {
 	Success bool
@@ -280,7 +284,7 @@ return nil, err
 }
 
 // Create buffered channel to prevent deadlock if consumer is slow
-outputChan := make(chan string, 100)
+outputChan := make(chan string, composeOutputBufferSize)
 
 // Start goroutine to execute command and stream output
 go func() {

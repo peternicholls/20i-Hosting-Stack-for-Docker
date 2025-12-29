@@ -20,6 +20,7 @@ package dashboard
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -256,11 +257,12 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 			m.streamingComplete = true
 			m.isStreaming = false
 			m.outputChannel = nil
-			// Trigger status refresh and switch to status panel
+			// Trigger status refresh and switch to status panel after delay
+			// Delay allows containers to fully start before querying status
 			return m, tea.Batch(
 				loadContainersCmd(m.dockerClient, m.projectName),
 				func() tea.Msg {
-					// Small delay to allow containers to start
+					time.Sleep(2 * time.Second)
 					return stackStatusRefreshMsg{}
 				},
 			)
