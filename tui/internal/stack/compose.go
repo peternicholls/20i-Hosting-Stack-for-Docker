@@ -311,11 +311,8 @@ if err != nil {
 
 // Start command
 if err := cmd.Start(); err != nil {
-// Close pipes to avoid resource leaks
-stdout.Close()
-stderr.Close()
-outputChan <- fmt.Sprintf("ERROR: Failed to start command: %v", err)
-return
+	outputChan <- fmt.Sprintf("ERROR: Failed to start command: %v", err)
+	return
 }
 
 // Stream output from both stdout and stderr
