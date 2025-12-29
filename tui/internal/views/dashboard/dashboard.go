@@ -193,17 +193,30 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 
 		m.containers = msg.containers
 		
-		// Auto-switch panel state based on containers
-		if len(m.containers) > 0 && m.rightPanelState == "preflight" {
-			m.rightPanelState = "status"
-		} else if len(m.containers) == 0 && m.rightPanelState == "status" {
-			m.rightPanelState = "preflight"
+		// Auto-switch panel state based on containers, but preserve "output" state
+		// Only transition between "preflight" and "status"
+		if m.rightPanelState != "output" {
+			if len(m.containers) > 0 && m.rightPanelState == "preflight" {
+				m.rightPanelState = "status"
+			} else if len(m.containers) == 0 && m.rightPanelState == "status" {
+				m.rightPanelState = "preflight"
+			}
 		}
 
 		if m.selectedIndex >= len(m.containers) {
 			m.selectedIndex = clampIndex(len(m.containers) - 1)
 		}
 		m.lastError = nil
+		return m, nil
+
+	case urlOpenedMsg:
+		// URL was successfully opened, update status message
+		m.lastStatusMsg = "Opened URL: " + msg.url
+		return m, nil
+
+	case urlOpenErrorMsg:
+		// URL opening failed, show error message
+		m.lastStatusMsg = "Failed to open URL: " + msg.err.Error()
 		return m, nil
 	}
 
@@ -265,6 +278,10 @@ func (m DashboardModel) View() string {
 
 func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {
 	return func() tea.Msg {
+		// Handle nil client (allowed for testing)
+		if client == nil {
+			return containerListMsg{containers: []docker.Container{}, err: nil}
+		}
 		containers, err := client.ListContainers(projectName)
 		return containerListMsg{containers: containers, err: err}
 	}

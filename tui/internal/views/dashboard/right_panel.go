@@ -151,9 +151,17 @@ func renderOutputPanel(composeOutput []string, width, height int) string {
 		}
 
 		for _, line := range composeOutput[startIdx:] {
-			// Truncate long lines
-			if len(line) > width-6 {
-				line = line[:width-9] + "..."
+			// Truncate long lines to fit panel width
+			maxWidth := width - 6
+			if maxWidth < 3 {
+				maxWidth = 3 // Minimum width for "..."
+			}
+			if len(line) > maxWidth {
+				if maxWidth <= 3 {
+					line = "..."
+				} else {
+					line = line[:maxWidth-3] + "..."
+				}
 			}
 			lines = append(lines, line)
 		}
