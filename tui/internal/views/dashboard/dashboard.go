@@ -60,6 +60,11 @@ type DashboardModel struct {
 	// URL opener (injectable for testing)
 	urlOpener ui.URLOpener
 
+	// Modal state for double-confirmation destroy flow
+	confirmationStage int    // 0: none | 1: first modal | 2: second modal
+	firstInput        string // Input for first confirmation
+	secondInput       string // Input for second confirmation
+
 	// Legacy fields for compatibility
 	selectedIndex int
 	projectName   string
@@ -148,13 +153,25 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		// State-specific key handling
+		// Modal has priority - if modal is open, handle modal keys first
+		if m.confirmationStage > 0 {
+			return m.handleModalKeys(msg)
+		}
+		
+		// Global key handling (when modal is not open)
 		switch msg.String() {
 		case "s":
-			// Start/stop stack based on state
-			if m.rightPanelState == "preflight" && m.project != nil && m.project.HasPublicHTML {
+			// Start stack (only allowed when public_html exists)
+			if m.project != nil && m.project.HasPublicHTML {
+				// Check if already running/starting - ignore if so
+				if len(m.containers) > 0 {
+					m.lastStatusMsg = "Stack is already running"
+					return m, nil
+				}
+				
 				// Switch to output mode and start stack
 				m.rightPanelState = "output"
+				m.composeOutput = []string{} // Clear previous output
 				m.lastStatusMsg = "Starting stack..."
 				
 				// Use project path as code directory
@@ -164,23 +181,75 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 				}
 				
 				return m, startComposeUpCmd(m.stackFile, codeDir)
-			} else if m.rightPanelState == "status" {
-				// Stop stack
+			}
+			return m, nil
+
+		case "t":
+			// Template installation or stack stop
+			if m.project != nil && !m.project.HasPublicHTML {
+				// Install template
+				m.lastStatusMsg = "Installing template..."
+				
+				projectRoot := m.project.Path
+				if projectRoot == "" {
+					projectRoot = m.codeDir
+				}
+				
+				return m, installTemplateCmd(projectRoot)
+			} else if len(m.containers) > 0 {
+				// Stop stack (stack is running)
 				m.rightPanelState = "output"
+				m.composeOutput = []string{} // Clear previous output
 				m.lastStatusMsg = "Stopping stack..."
-				return m, nil // TODO: Add stack stop command
+				
+				codeDir := m.codeDir
+				if codeDir == "" && m.project != nil {
+					codeDir = m.project.Path
+				}
+				
+				return m, startComposeDownCmd(m.stackFile, codeDir)
 			}
 			return m, nil
 
 		case "r":
-			// Refresh - reload containers
+			// Restart stack (only allowed when public_html exists and stack is running)
+			if m.project != nil && m.project.HasPublicHTML && len(m.containers) > 0 {
+				m.rightPanelState = "output"
+				m.composeOutput = []string{} // Clear previous output
+				m.lastStatusMsg = "Restarting stack..."
+				
+				codeDir := m.codeDir
+				if codeDir == "" && m.project != nil {
+					codeDir = m.project.Path
+				}
+				
+				return m, startComposeRestartCmd(m.stackFile, codeDir)
+			}
+			// If no containers, just refresh the container list
 			return m, loadContainersCmd(m.dockerClient, m.projectName)
 
+		case "d":
+			// Destroy stack - open first confirmation modal
+			// Only allow if stack exists (running or stopped)
+			if m.project != nil && m.project.HasPublicHTML {
+				m.confirmationStage = 1
+				m.firstInput = ""
+				m.secondInput = ""
+				return m, nil
+			}
+			return m, nil
+
 		case "enter":
-			// Install template in preflight mode
+			// Install template in preflight mode (legacy support)
 			if m.rightPanelState == "preflight" && m.project != nil && !m.project.HasPublicHTML {
 				m.lastStatusMsg = "Installing template..."
-				return m, nil // TODO: Add template install command
+				
+				projectRoot := m.project.Path
+				if projectRoot == "" {
+					projectRoot = m.codeDir
+				}
+				
+				return m, installTemplateCmd(projectRoot)
 			}
 			return m, nil
 
@@ -301,13 +370,102 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		m.composeOutput = []string{} // Clear previous output
 		m.streamingComplete = false
 		return m, waitForNextLineCmd(m.outputChannel)
+	
+	case templateInstalledMsg:
+		// Handle template installation result
+		if msg.success {
+			m.lastStatusMsg = "Template installed successfully"
+			// Re-detect project to update HasPublicHTML status
+			return m, detectProjectCmd()
+		} else {
+			m.lastStatusMsg = fmt.Sprintf("Template installation failed: %v", msg.err)
+			return m, nil
+		}
 	}
 
 	return m, nil
 }
 
+// handleModalKeys handles keyboard input when the confirmation modal is active.
+// It processes Esc, Enter, Backspace, and printable characters.
+//
+// Parameters:
+//   - msg: The keyboard message to process
+//
+// Returns:
+//   - Updated model and optional command
+func (m DashboardModel) handleModalKeys(msg tea.KeyMsg) (DashboardModel, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		// Cancel modal at any stage
+		m.confirmationStage = 0
+		m.firstInput = ""
+		m.secondInput = ""
+		m.lastStatusMsg = "Destroy cancelled"
+		return m, nil
+	
+	case "enter":
+		if m.confirmationStage == 1 {
+			// Check if first input is "yes"
+			if m.firstInput == "yes" {
+				// Advance to second stage
+				m.confirmationStage = 2
+				m.secondInput = ""
+				return m, nil
+			}
+			// Input doesn't match, stay in stage 1
+			return m, nil
+		} else if m.confirmationStage == 2 {
+			// Check if second input is "destroy"
+			if m.secondInput == "destroy" {
+				// Trigger destroy operation
+				m.confirmationStage = 0
+				m.firstInput = ""
+				m.secondInput = ""
+				m.rightPanelState = "output"
+				m.composeOutput = []string{} // Clear previous output
+				m.lastStatusMsg = "Destroying stack..."
+				
+				codeDir := m.codeDir
+				if codeDir == "" && m.project != nil {
+					codeDir = m.project.Path
+				}
+				
+				return m, startComposeDestroyCmd(m.stackFile, codeDir)
+			}
+			// Input doesn't match, stay in stage 2
+			return m, nil
+		}
+	
+	case "backspace":
+		// Remove last character from current input
+		if m.confirmationStage == 1 && len(m.firstInput) > 0 {
+			m.firstInput = m.firstInput[:len(m.firstInput)-1]
+		} else if m.confirmationStage == 2 && len(m.secondInput) > 0 {
+			m.secondInput = m.secondInput[:len(m.secondInput)-1]
+		}
+		return m, nil
+	
+	default:
+		// Handle printable characters (append to current input)
+		key := msg.String()
+		if len(key) == 1 {
+			// Single character - append to appropriate input
+			if m.confirmationStage == 1 {
+				m.firstInput += key
+			} else if m.confirmationStage == 2 {
+				m.secondInput += key
+			}
+		}
+		return m, nil
+	}
+	
+	return m, nil
+}
+
 // stackStatusRefreshMsg is sent to trigger a switch to status panel
 type stackStatusRefreshMsg struct{}
+
 
 
 // View renders the three-panel dashboard layout.
@@ -356,11 +514,27 @@ func (m DashboardModel) View() string {
 	bottomPanel := renderBottomPanel(m.rightPanelState, m.lastStatusMsg, m.width)
 
 	// Join vertically
-	return lipgloss.JoinVertical(
+	baseView := lipgloss.JoinVertical(
 		lipgloss.Left,
 		mainContent,
 		bottomPanel,
 	)
+	
+	// If modal is active, overlay it on top of the base view
+	if m.confirmationStage > 0 {
+		var currentInput string
+		if m.confirmationStage == 1 {
+			currentInput = m.firstInput
+		} else if m.confirmationStage == 2 {
+			currentInput = m.secondInput
+		}
+		
+		modal := ui.RenderConfirmationModal(m.confirmationStage, currentInput, m.width, m.height)
+		// Layer the modal over the base view
+		return modal
+	}
+	
+	return baseView
 }
 
 func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {
@@ -428,6 +602,69 @@ type composeStreamStartedMsg struct {
 	channel <-chan string
 }
 
+// startComposeDownCmd starts a compose down operation with streaming output.
+func startComposeDownCmd(stackFile, codeDir string) tea.Cmd {
+	return func() tea.Msg {
+		outputChan, err := stack.ComposeDownStreaming(stackFile, codeDir)
+		if err != nil {
+			return stackOutputMsg{
+				Line:    fmt.Sprintf("ERROR: Failed to start compose down: %v", err),
+				IsError: true,
+			}
+		}
+		return composeStreamStartedMsg{channel: outputChan}
+	}
+}
+
+// startComposeRestartCmd starts a compose restart operation with streaming output.
+func startComposeRestartCmd(stackFile, codeDir string) tea.Cmd {
+	return func() tea.Msg {
+		outputChan, err := stack.ComposeRestartStreaming(stackFile, codeDir)
+		if err != nil {
+			return stackOutputMsg{
+				Line:    fmt.Sprintf("ERROR: Failed to start compose restart: %v", err),
+				IsError: true,
+			}
+		}
+		return composeStreamStartedMsg{channel: outputChan}
+	}
+}
+
+// startComposeDestroyCmd starts a compose destroy operation with streaming output.
+func startComposeDestroyCmd(stackFile, codeDir string) tea.Cmd {
+	return func() tea.Msg {
+		outputChan, err := stack.ComposeDestroyStreaming(stackFile, codeDir)
+		if err != nil {
+			return stackOutputMsg{
+				Line:    fmt.Sprintf("ERROR: Failed to start compose destroy: %v", err),
+				IsError: true,
+			}
+		}
+		return composeStreamStartedMsg{channel: outputChan}
+	}
+}
+
+// installTemplateCmd triggers template installation asynchronously.
+func installTemplateCmd(projectRoot string) tea.Cmd {
+	return func() tea.Msg {
+		err := project.InstallTemplate(projectRoot)
+		if err != nil {
+			return templateInstalledMsg{
+				success: false,
+				err:     err,
+			}
+		}
+		return templateInstalledMsg{
+			success: true,
+		}
+	}
+}
+
+// templateInstalledMsg is sent when template installation completes.
+type templateInstalledMsg struct {
+	success bool
+	err     error
+}
 
 // detectProjectCmd triggers async project detection.
 func detectProjectCmd() tea.Cmd {

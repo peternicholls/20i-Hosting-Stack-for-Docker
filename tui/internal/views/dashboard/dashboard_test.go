@@ -386,3 +386,397 @@ if cmd == nil {
 t.Error("Expected a command to be returned")
 }
 }
+
+// TestDashboardModel_KeyHandlers tests the keyboard shortcuts for stack operations
+func TestDashboardModel_KeyHandlers(t *testing.T) {
+	t.Run("S key starts stack only when public_html exists", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.stackFile = "/test/docker-compose.yml"
+		model.rightPanelState = "preflight"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		if updatedModel.rightPanelState != "output" {
+			t.Errorf("Expected rightPanelState 'output', got '%s'", updatedModel.rightPanelState)
+		}
+		
+		if cmd == nil {
+			t.Error("Expected command to be returned")
+		}
+		
+		if updatedModel.lastStatusMsg != "Starting stack..." {
+			t.Errorf("Expected status message 'Starting stack...', got '%s'", updatedModel.lastStatusMsg)
+		}
+	})
+	
+	t.Run("S key does nothing when public_html missing", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: false,
+		}
+		model.rightPanelState = "preflight"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		if updatedModel.rightPanelState != "preflight" {
+			t.Errorf("Expected rightPanelState to remain 'preflight', got '%s'", updatedModel.rightPanelState)
+		}
+		
+		if cmd != nil {
+			t.Error("Expected no command when public_html missing")
+		}
+	})
+	
+	t.Run("S key does nothing when stack already running", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.containers = []docker.Container{
+			{Service: "nginx", Status: docker.StatusRunning},
+		}
+		model.rightPanelState = "status"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		if updatedModel.lastStatusMsg != "Stack is already running" {
+			t.Errorf("Expected status message 'Stack is already running', got '%s'", updatedModel.lastStatusMsg)
+		}
+		
+		if cmd != nil {
+			t.Error("Expected no command when stack already running")
+		}
+	})
+	
+	t.Run("T key installs template when public_html missing", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: false,
+		}
+		model.rightPanelState = "preflight"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		if updatedModel.lastStatusMsg != "Installing template..." {
+			t.Errorf("Expected status message 'Installing template...', got '%s'", updatedModel.lastStatusMsg)
+		}
+		
+		if cmd == nil {
+			t.Error("Expected command to be returned for template installation")
+		}
+	})
+	
+	t.Run("T key stops stack when running", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.stackFile = "/test/docker-compose.yml"
+		model.containers = []docker.Container{
+			{Service: "nginx", Status: docker.StatusRunning},
+		}
+		model.rightPanelState = "status"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		if updatedModel.rightPanelState != "output" {
+			t.Errorf("Expected rightPanelState 'output', got '%s'", updatedModel.rightPanelState)
+		}
+		
+		if cmd == nil {
+			t.Error("Expected command to be returned for stack stop")
+		}
+		
+		if updatedModel.lastStatusMsg != "Stopping stack..." {
+			t.Errorf("Expected status message 'Stopping stack...', got '%s'", updatedModel.lastStatusMsg)
+		}
+	})
+	
+	t.Run("R key triggers restart when stack running", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.stackFile = "/test/docker-compose.yml"
+		model.containers = []docker.Container{
+			{Service: "nginx", Status: docker.StatusRunning},
+		}
+		model.rightPanelState = "status"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		if updatedModel.rightPanelState != "output" {
+			t.Errorf("Expected rightPanelState 'output', got '%s'", updatedModel.rightPanelState)
+		}
+		
+		if cmd == nil {
+			t.Error("Expected command to be returned for restart")
+		}
+		
+		if updatedModel.lastStatusMsg != "Restarting stack..." {
+			t.Errorf("Expected status message 'Restarting stack...', got '%s'", updatedModel.lastStatusMsg)
+		}
+	})
+	
+	t.Run("R key refreshes containers when stack not running", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.containers = []docker.Container{}
+		model.rightPanelState = "preflight"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}
+		updatedModel, cmd := model.Update(msg)
+		
+		// Should trigger container list refresh
+		if cmd == nil {
+			t.Error("Expected command to be returned for refresh")
+		}
+		
+		// State should remain preflight
+		if updatedModel.rightPanelState != "preflight" {
+			t.Errorf("Expected rightPanelState 'preflight', got '%s'", updatedModel.rightPanelState)
+		}
+	})
+	
+	t.Run("D key opens first confirmation modal", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.rightPanelState = "status"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+		updatedModel, _ := model.Update(msg)
+		
+		if updatedModel.confirmationStage != 1 {
+			t.Errorf("Expected confirmationStage 1, got %d", updatedModel.confirmationStage)
+		}
+		
+		if updatedModel.firstInput != "" {
+			t.Errorf("Expected firstInput to be empty, got '%s'", updatedModel.firstInput)
+		}
+		
+		if updatedModel.secondInput != "" {
+			t.Errorf("Expected secondInput to be empty, got '%s'", updatedModel.secondInput)
+		}
+	})
+	
+	t.Run("D key does nothing when public_html missing", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: false,
+		}
+		model.rightPanelState = "preflight"
+		
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+		updatedModel, _ := model.Update(msg)
+		
+		if updatedModel.confirmationStage != 0 {
+			t.Errorf("Expected confirmationStage 0, got %d", updatedModel.confirmationStage)
+		}
+	})
+}
+
+// TestDashboardModel_ModalFlow tests the double-confirmation destroy flow
+func TestDashboardModel_ModalFlow(t *testing.T) {
+	t.Run("Modal stage 1 requires exact 'yes' to advance", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.confirmationStage = 1
+		model.firstInput = ""
+		
+		// Type 'y'
+		model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+		if model.firstInput != "y" {
+			t.Errorf("Expected firstInput 'y', got '%s'", model.firstInput)
+		}
+		
+		// Type 'e'
+		model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+		if model.firstInput != "ye" {
+			t.Errorf("Expected firstInput 'ye', got '%s'", model.firstInput)
+		}
+		
+		// Type 's'
+		model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+		if model.firstInput != "yes" {
+			t.Errorf("Expected firstInput 'yes', got '%s'", model.firstInput)
+		}
+		
+		// Press Enter
+		updatedModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		
+		if updatedModel.confirmationStage != 2 {
+			t.Errorf("Expected confirmationStage 2, got %d", updatedModel.confirmationStage)
+		}
+		
+		if updatedModel.secondInput != "" {
+			t.Errorf("Expected secondInput to be reset, got '%s'", updatedModel.secondInput)
+		}
+	})
+	
+	t.Run("Modal stage 1 rejects incorrect input", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.confirmationStage = 1
+		model.firstInput = "yep"
+		
+		// Press Enter with wrong input
+		updatedModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		
+		if updatedModel.confirmationStage != 1 {
+			t.Errorf("Expected to stay in confirmationStage 1, got %d", updatedModel.confirmationStage)
+		}
+	})
+	
+	t.Run("Modal stage 2 requires exact 'destroy' to trigger", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.stackFile = "/test/docker-compose.yml"
+		model.confirmationStage = 2
+		
+		// Type 'destroy'
+		for _, r := range "destroy" {
+			model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		}
+		
+		if model.secondInput != "destroy" {
+			t.Errorf("Expected secondInput 'destroy', got '%s'", model.secondInput)
+		}
+		
+		// Press Enter
+		updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		
+		if updatedModel.confirmationStage != 0 {
+			t.Errorf("Expected confirmationStage reset to 0, got %d", updatedModel.confirmationStage)
+		}
+		
+		if updatedModel.rightPanelState != "output" {
+			t.Errorf("Expected rightPanelState 'output', got '%s'", updatedModel.rightPanelState)
+		}
+		
+		if cmd == nil {
+			t.Error("Expected command to be returned for destroy")
+		}
+	})
+	
+	t.Run("Esc cancels modal from stage 1", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.confirmationStage = 1
+		model.firstInput = "y"
+		
+		updatedModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+		
+		if updatedModel.confirmationStage != 0 {
+			t.Errorf("Expected confirmationStage 0 after Esc, got %d", updatedModel.confirmationStage)
+		}
+		
+		if updatedModel.firstInput != "" {
+			t.Errorf("Expected firstInput cleared, got '%s'", updatedModel.firstInput)
+		}
+		
+		if updatedModel.secondInput != "" {
+			t.Errorf("Expected secondInput cleared, got '%s'", updatedModel.secondInput)
+		}
+	})
+	
+	t.Run("Esc cancels modal from stage 2", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.confirmationStage = 2
+		model.firstInput = "yes"
+		model.secondInput = "des"
+		
+		updatedModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+		
+		if updatedModel.confirmationStage != 0 {
+			t.Errorf("Expected confirmationStage 0 after Esc, got %d", updatedModel.confirmationStage)
+		}
+		
+		if updatedModel.firstInput != "" || updatedModel.secondInput != "" {
+			t.Error("Expected all inputs cleared after Esc")
+		}
+	})
+	
+	t.Run("Backspace removes characters", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.confirmationStage = 1
+		model.firstInput = "yes"
+		
+		updatedModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		
+		if updatedModel.firstInput != "ye" {
+			t.Errorf("Expected firstInput 'ye' after backspace, got '%s'", updatedModel.firstInput)
+		}
+	})
+	
+	t.Run("Modal consumes S/T/R keys (does not trigger stack ops)", func(t *testing.T) {
+		model := NewModel(nil, "test-project")
+		model.project = &project.Project{
+			Name:          "test",
+			Path:          "/test",
+			HasPublicHTML: true,
+		}
+		model.confirmationStage = 1
+		model.rightPanelState = "status"
+		
+		// Try 'S' key while modal is open
+		updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+		
+		// Should add 's' to input, not trigger stack start
+		if updatedModel.firstInput != "s" {
+			t.Errorf("Expected 's' added to firstInput, got '%s'", updatedModel.firstInput)
+		}
+		
+		// Panel state should not change
+		if updatedModel.rightPanelState != "status" {
+			t.Errorf("Expected rightPanelState 'status', got '%s'", updatedModel.rightPanelState)
+		}
+		
+		// No command should be triggered
+		if cmd != nil {
+			t.Error("Expected no command while modal is consuming keys")
+		}
+	})
+}
+
