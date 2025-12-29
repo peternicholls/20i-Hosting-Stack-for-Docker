@@ -48,7 +48,7 @@ type DashboardModel struct {
 
 	// Compose output for streaming display
 	composeOutput []string
-	
+
 	// Streaming state
 	isStreaming       bool
 	streamingComplete bool
@@ -96,7 +96,7 @@ func NewModel(client *docker.Client, projectName string) DashboardModel {
 	if err == nil && stackEnv != nil {
 		stackFile = stackEnv.StackFile
 	}
-	
+
 	return DashboardModel{
 		dockerClient:    client,
 		projectName:     projectName,
@@ -157,7 +157,7 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		if m.confirmationStage > 0 {
 			return m.handleModalKeys(msg)
 		}
-		
+
 		// Global key handling (when modal is not open)
 		switch msg.String() {
 		case "s":
@@ -168,18 +168,18 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 					m.lastStatusMsg = "Stack is already running"
 					return m, nil
 				}
-				
+
 				// Switch to output mode and start stack
 				m.rightPanelState = "output"
 				m.composeOutput = []string{} // Clear previous output
 				m.lastStatusMsg = "Starting stack..."
-				
+
 				// Use project path as code directory
 				codeDir := m.codeDir
 				if codeDir == "" && m.project != nil {
 					codeDir = m.project.Path
 				}
-				
+
 				return m, startComposeUpCmd(m.stackFile, codeDir)
 			}
 			return m, nil
@@ -189,24 +189,24 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 			if m.project != nil && !m.project.HasPublicHTML {
 				// Install template
 				m.lastStatusMsg = "Installing template..."
-				
+
 				projectRoot := m.project.Path
 				if projectRoot == "" {
 					projectRoot = m.codeDir
 				}
-				
+
 				return m, installTemplateCmd(projectRoot)
 			} else if len(m.containers) > 0 {
 				// Stop stack (stack is running)
 				m.rightPanelState = "output"
 				m.composeOutput = []string{} // Clear previous output
 				m.lastStatusMsg = "Stopping stack..."
-				
+
 				codeDir := m.codeDir
 				if codeDir == "" && m.project != nil {
 					codeDir = m.project.Path
 				}
-				
+
 				return m, startComposeDownCmd(m.stackFile, codeDir)
 			}
 			return m, nil
@@ -217,12 +217,12 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 				m.rightPanelState = "output"
 				m.composeOutput = []string{} // Clear previous output
 				m.lastStatusMsg = "Restarting stack..."
-				
+
 				codeDir := m.codeDir
 				if codeDir == "" && m.project != nil {
 					codeDir = m.project.Path
 				}
-				
+
 				return m, startComposeRestartCmd(m.stackFile, codeDir)
 			}
 			// If no containers, just refresh the container list
@@ -243,12 +243,12 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 			// Install template in preflight mode (legacy support)
 			if m.rightPanelState == "preflight" && m.project != nil && !m.project.HasPublicHTML {
 				m.lastStatusMsg = "Installing template..."
-				
+
 				projectRoot := m.project.Path
 				if projectRoot == "" {
 					projectRoot = m.codeDir
 				}
-				
+
 				return m, installTemplateCmd(projectRoot)
 			}
 			return m, nil
@@ -294,7 +294,7 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		}
 
 		m.containers = msg.containers
-		
+
 		// Auto-switch panel state based on containers, but preserve "output" state
 		// Only transition between "preflight" and "status"
 		if m.rightPanelState != "output" {
@@ -320,11 +320,11 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		// URL opening failed, show error message
 		m.lastStatusMsg = "Failed to open URL: " + msg.err.Error()
 		return m, nil
-	
+
 	case stackOutputMsg:
 		// Handle streaming output from compose operations
 		m.composeOutput = append(m.composeOutput, msg.Line)
-		
+
 		// Detect critical errors that should stop streaming
 		if strings.HasPrefix(msg.Line, "ERROR: Failed to start command") ||
 			strings.HasPrefix(msg.Line, "ERROR: Failed to create") {
@@ -334,7 +334,7 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 			m.lastStatusMsg = "Compose operation failed"
 			return m, nil
 		}
-		
+
 		// Detect completion
 		if msg.Line == "[Complete]" {
 			m.streamingComplete = true
@@ -349,20 +349,20 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 				}),
 			)
 		}
-		
+
 		// Continue reading from the channel if streaming
 		if m.isStreaming && m.outputChannel != nil {
 			return m, waitForNextLineCmd(m.outputChannel)
 		}
-		
+
 		return m, nil
-	
+
 	case stackStatusRefreshMsg:
 		// Switch to status panel after streaming completes
 		m.rightPanelState = "status"
 		m.lastStatusMsg = "Stack started successfully"
 		return m, nil
-	
+
 	case composeStreamStartedMsg:
 		// Store the channel and start reading from it
 		m.outputChannel = msg.channel
@@ -370,7 +370,7 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		m.composeOutput = []string{} // Clear previous output
 		m.streamingComplete = false
 		return m, waitForNextLineCmd(m.outputChannel)
-	
+
 	case templateInstalledMsg:
 		// Handle template installation result
 		if msg.success {
@@ -403,7 +403,7 @@ func (m DashboardModel) handleModalKeys(msg tea.KeyMsg) (DashboardModel, tea.Cmd
 		m.secondInput = ""
 		m.lastStatusMsg = "Destroy cancelled"
 		return m, nil
-	
+
 	case "enter":
 		if m.confirmationStage == 1 {
 			// Check if first input is "yes"
@@ -425,18 +425,18 @@ func (m DashboardModel) handleModalKeys(msg tea.KeyMsg) (DashboardModel, tea.Cmd
 				m.rightPanelState = "output"
 				m.composeOutput = []string{} // Clear previous output
 				m.lastStatusMsg = "Destroying stack..."
-				
+
 				codeDir := m.codeDir
 				if codeDir == "" && m.project != nil {
 					codeDir = m.project.Path
 				}
-				
+
 				return m, startComposeDestroyCmd(m.stackFile, codeDir)
 			}
 			// Input doesn't match, stay in stage 2
 			return m, nil
 		}
-	
+
 	case "backspace":
 		// Remove last character from current input
 		if m.confirmationStage == 1 && len(m.firstInput) > 0 {
@@ -445,7 +445,7 @@ func (m DashboardModel) handleModalKeys(msg tea.KeyMsg) (DashboardModel, tea.Cmd
 			m.secondInput = m.secondInput[:len(m.secondInput)-1]
 		}
 		return m, nil
-	
+
 	default:
 		// Handle printable characters (append to current input)
 		key := msg.String()
@@ -459,14 +459,12 @@ func (m DashboardModel) handleModalKeys(msg tea.KeyMsg) (DashboardModel, tea.Cmd
 		}
 		return m, nil
 	}
-	
+
 	return m, nil
 }
 
 // stackStatusRefreshMsg is sent to trigger a switch to status panel
 type stackStatusRefreshMsg struct{}
-
-
 
 // View renders the three-panel dashboard layout.
 // Layout:
@@ -519,7 +517,7 @@ func (m DashboardModel) View() string {
 		mainContent,
 		bottomPanel,
 	)
-	
+
 	// If modal is active, overlay it on top of the base view
 	if m.confirmationStage > 0 {
 		var currentInput string
@@ -528,12 +526,12 @@ func (m DashboardModel) View() string {
 		} else if m.confirmationStage == 2 {
 			currentInput = m.secondInput
 		}
-		
+
 		modal := ui.RenderConfirmationModal(m.confirmationStage, currentInput, m.width, m.height)
 		// Layer the modal over the base view
 		return modal
 	}
-	
+
 	return baseView
 }
 
@@ -591,7 +589,7 @@ func startComposeUpCmd(stackFile, codeDir string) tea.Cmd {
 				IsError: true,
 			}
 		}
-		
+
 		// Return a message that includes the channel
 		return composeStreamStartedMsg{channel: outputChan}
 	}

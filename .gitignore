@@ -57,3 +57,8 @@ demo-site/
 # Build artifacts
 tui/bin/
 internal/go.sum
+
+# Test coverage
+tui/coverage.out
+tui/coverage.html
+*.out

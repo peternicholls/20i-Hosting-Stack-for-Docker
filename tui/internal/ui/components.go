@@ -62,7 +62,7 @@ func StatusIcon(status string) string {
 //   - Rendered modal as a string
 func RenderConfirmationModal(stage int, currentInput string, width, height int) string {
 	var title, prompt, progress string
-	
+
 	switch stage {
 	case 1:
 		title = "⚠️  Destroy stack?"
@@ -75,62 +75,62 @@ func RenderConfirmationModal(stage int, currentInput string, width, height int) 
 	default:
 		return ""
 	}
-	
+
 	// Modal styling
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("9")). // Red
 		Align(lipgloss.Center).
 		Padding(0, 1)
-	
+
 	promptStyle := lipgloss.NewStyle().
 		Foreground(ColorMuted).
 		Align(lipgloss.Center).
 		Padding(0, 1)
-	
+
 	progressStyle := lipgloss.NewStyle().
 		Foreground(ColorMuted).
 		Align(lipgloss.Center).
 		Italic(true).
 		Padding(0, 1)
-	
+
 	inputStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("11")). // Yellow
 		Align(lipgloss.Center).
 		Padding(0, 1)
-	
+
 	hintStyle := lipgloss.NewStyle().
 		Foreground(ColorMuted).
 		Align(lipgloss.Center).
 		Italic(true).
 		Padding(0, 1)
-	
+
 	modalContentStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("9")). // Red
 		Padding(1, 2).
 		Width(50)
-	
+
 	// Build modal content
 	var lines []string
 	lines = append(lines, titleStyle.Render(title))
 	lines = append(lines, "") // Empty line
 	lines = append(lines, promptStyle.Render(prompt))
 	lines = append(lines, "") // Empty line
-	
+
 	// Show current input with cursor
 	inputDisplay := currentInput + "█"
 	lines = append(lines, inputStyle.Render(inputDisplay))
 	lines = append(lines, "") // Empty line
-	
+
 	// Show progress and help
 	lines = append(lines, progressStyle.Render(progress))
 	lines = append(lines, hintStyle.Render("Esc: cancel"))
-	
+
 	content := lipgloss.JoinVertical(lipgloss.Center, lines...)
 	modal := modalContentStyle.Render(content)
-	
+
 	// Center the modal on screen
 	centered := lipgloss.Place(
 		width,
@@ -139,6 +139,6 @@ func RenderConfirmationModal(stage int, currentInput string, width, height int) 
 		lipgloss.Center,
 		modal,
 	)
-	
+
 	return centered
 }
