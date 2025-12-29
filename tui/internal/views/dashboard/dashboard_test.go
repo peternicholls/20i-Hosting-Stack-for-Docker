@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -222,13 +223,8 @@ func TestRightPanelState_Transitions(t *testing.T) {
 // Helper function to check if a string contains any of the given substrings
 func containsAny(s string, substrings ...string) bool {
 	for _, substr := range substrings {
-		if len(substr) > 0 {
-			// Simple substring search
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
+		if strings.Contains(s, substr) {
+			return true
 		}
 	}
 	return false

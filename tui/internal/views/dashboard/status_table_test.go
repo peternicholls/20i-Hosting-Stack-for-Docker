@@ -158,11 +158,27 @@ func TestHandleURLClick_InsideRegion(t *testing.T) {
 		Y:      2,
 	}
 
-	handleURLClick(msg, state, mockOpener)
+	cmd := handleURLClick(msg, state, mockOpener)
+	if cmd == nil {
+		t.Fatal("Expected command to be returned for URL click")
+	}
 
-	// Note: The actual URL opening happens in a goroutine
-	// so we can't reliably test it here without adding synchronization
-	// In a real test environment, we would use channels or wait groups
+	// Execute the command to trigger URL opening
+	result := cmd()
+	
+	// Verify the URL was opened
+	if len(mockOpener.OpenedURLs) != 1 {
+		t.Errorf("Expected 1 URL to be opened, got %d", len(mockOpener.OpenedURLs))
+	}
+	
+	if len(mockOpener.OpenedURLs) > 0 && mockOpener.OpenedURLs[0] != "http://localhost:80" {
+		t.Errorf("Expected URL 'http://localhost:80', got '%s'", mockOpener.OpenedURLs[0])
+	}
+
+	// Verify the result message
+	if _, ok := result.(urlOpenedMsg); !ok {
+		t.Errorf("Expected urlOpenedMsg, got %T", result)
+	}
 }
 
 func TestTruncateString(t *testing.T) {

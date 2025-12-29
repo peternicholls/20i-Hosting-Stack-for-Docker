@@ -63,20 +63,28 @@ func renderStatusTable(containers []docker.Container, width, height int) (string
 	// Build table
 	var rows []string
 
-	// Header
+	// Column widths (used for formatting and click region calculation)
+	const (
+		colService = 20
+		colStatus  = 12
+		colImage   = 30
+		colURL     = 25
+		colCPU     = 10
+	)
+
+	// Header (apply styling to entire row after formatting)
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(ui.ColorPrimary).
-		Padding(0, 1)
+		Foreground(ui.ColorPrimary)
 
-	header := headerStyle.Render(fmt.Sprintf("%-20s %-12s %-30s %-25s %-10s",
-		"Service",
-		"Status",
-		"Image",
-		"URL/Port",
-		"CPU%",
-	))
-	rows = append(rows, header)
+	headerText := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s",
+		colService, "Service",
+		colStatus, "Status",
+		colImage, "Image",
+		colURL, "URL/Port",
+		colCPU, "CPU%",
+	)
+	rows = append(rows, headerStyle.Render(headerText))
 
 	// Separator
 	rows = append(rows, strings.Repeat("─", width-4))
@@ -85,38 +93,47 @@ func renderStatusTable(containers []docker.Container, width, height int) (string
 	for i, container := range containers {
 		row := i + 2 // +2 for header and separator
 
-		// Service name
-		serviceName := truncateString(container.Service, 20)
+		// Service name (plain text)
+		serviceName := truncateString(container.Service, colService)
 
-		// Status badge
-		statusBadge := getStatusBadge(container.Status)
+		// Status badge (plain text, styling applied later)
+		statusText := getStatusText(container.Status)
 
-		// Image name (truncate)
-		imageName := truncateString(container.Image, 30)
+		// Image name (plain text)
+		imageName := truncateString(container.Image, colImage)
 
-		// URL/Port with click detection
-		urlText, urlStart, urlEnd := formatURLField(container, 25)
-		if urlStart >= 0 {
+		// URL/Port (plain text for now, will style entire row)
+		url := extractURL(container)
+		urlText := truncateString(url, colURL)
+		
+		// Track URL region if present
+		if url != "" {
+			// Calculate column offset: service + status + image + spacing
+			urlColStart := colService + colStatus + colImage + 2
 			state.URLRegions = append(state.URLRegions, URLRegion{
-				URL:      extractURL(container),
+				URL:      url,
 				Row:      row,
-				ColStart: 64 + urlStart, // Offset for previous columns
-				ColEnd:   64 + urlEnd,
+				ColStart: urlColStart,
+				ColEnd:   urlColStart + len(urlText),
 			})
 		}
 
-		// CPU bar (placeholder for now, will be populated with real stats)
-		cpuBar := renderCPUBar(0.0, 10)
+		// CPU bar (plain text)
+		cpuBar := renderCPUBarPlain(0.0, colCPU)
 
-		rowText := fmt.Sprintf("%-20s %-12s %-30s %-25s %-10s",
-			serviceName,
-			statusBadge,
-			imageName,
-			urlText,
-			cpuBar,
+		// Format row with plain text
+		rowText := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s",
+			colService, serviceName,
+			colStatus, statusText,
+			colImage, imageName,
+			colURL, urlText,
+			colCPU, cpuBar,
 		)
 
-		rows = append(rows, rowText)
+		// Apply styling to specific cells by wrapping the entire row
+		styledRow := styleTableRow(rowText, container.Status, url != "")
+
+		rows = append(rows, styledRow)
 	}
 
 	content := strings.Join(rows, "\n")
@@ -139,16 +156,7 @@ func renderStatusTable(containers []docker.Container, width, height int) (string
 // Returns:
 //   - Rendered and colored CPU bar
 func renderCPUBar(cpuPercent float64, width int) string {
-	if width <= 0 {
-		return ""
-	}
-
-	filled := int((cpuPercent / 100.0) * float64(width))
-	if filled > width {
-		filled = width
-	}
-
-	bar := strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
+	bar := renderCPUBarPlain(cpuPercent, width)
 	
 	// Color based on usage
 	style := lipgloss.NewStyle()
@@ -163,6 +171,20 @@ func renderCPUBar(cpuPercent float64, width int) string {
 	return style.Render(bar)
 }
 
+// renderCPUBarPlain renders a plain text CPU bar without styling.
+func renderCPUBarPlain(cpuPercent float64, width int) string {
+	if width <= 0 {
+		return ""
+	}
+
+	filled := int((cpuPercent / 100.0) * float64(width))
+	if filled > width {
+		filled = width
+	}
+
+	return strings.Repeat("▓", filled) + strings.Repeat("░", width-filled)
+}
+
 // getStatusBadge returns a styled status badge for the container status.
 // The badge is colored based on status: green (running), gray (stopped),
 // yellow (restarting), red (error).
@@ -173,64 +195,47 @@ func renderCPUBar(cpuPercent float64, width int) string {
 // Returns:
 //   - Styled status badge string
 func getStatusBadge(status docker.ContainerStatus) string {
+	text := getStatusText(status)
+	
 	var style lipgloss.Style
-	var text string
-
 	switch status {
 	case docker.StatusRunning:
 		style = lipgloss.NewStyle().Foreground(ui.ColorRunning).Bold(true)
-		text = "Running"
 	case docker.StatusStopped:
 		style = lipgloss.NewStyle().Foreground(ui.ColorStopped)
-		text = "Stopped"
 	case docker.StatusRestarting:
 		style = lipgloss.NewStyle().Foreground(ui.ColorWarning).Bold(true)
-		text = "Restarting"
 	case docker.StatusError:
 		style = lipgloss.NewStyle().Foreground(ui.ColorError).Bold(true)
-		text = "Error"
 	default:
 		style = lipgloss.NewStyle().Foreground(ui.ColorMuted)
-		text = "Unknown"
 	}
 
 	return style.Render(text)
 }
 
-// formatURLField formats the URL/Port field and returns the text, start, and end positions
-// for click detection. Web URLs (http/https) are highlighted with color and underline.
-//
-// Parameters:
-//   - container: Docker container to extract URL from
-//   - maxWidth: Maximum width for the field
-//
-// Returns:
-//   - text: Formatted and styled URL text
-//   - start: Starting column for click detection (-1 if no URL)
-//   - end: Ending column for click detection (-1 if no URL)
-func formatURLField(container docker.Container, maxWidth int) (string, int, int) {
-	url := extractURL(container)
-	if url == "" {
-		return truncateString("N/A", maxWidth), -1, -1
+// getStatusText returns plain text status without styling.
+func getStatusText(status docker.ContainerStatus) string {
+	switch status {
+	case docker.StatusRunning:
+		return "Running"
+	case docker.StatusStopped:
+		return "Stopped"
+	case docker.StatusRestarting:
+		return "Restarting"
+	case docker.StatusError:
+		return "Error"
+	default:
+		return "Unknown"
 	}
+}
 
-	// Highlight URLs for web services
-	isWebURL := strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")
-
-	urlText := truncateString(url, maxWidth)
-	// Store visual length before applying any styling (ANSI codes)
-	visualLength := len(urlText)
-
-	if isWebURL {
-		// Highlight in blue/underline
-		styled := lipgloss.NewStyle().
-			Foreground(ui.ColorAccent).
-			Underline(true).
-			Render(urlText)
-		return styled, 0, visualLength
-	}
-
-	return urlText, 0, visualLength
+// styleTableRow applies styling to a formatted table row while preserving alignment.
+// This is applied after the row is formatted to avoid ANSI code length issues.
+func styleTableRow(rowText string, status docker.ContainerStatus, hasURL bool) string {
+	// For now, return plain text to avoid alignment issues
+	// Individual cell styling can be added back using a more sophisticated approach
+	return rowText
 }
 
 // extractURL extracts the URL or port information from a container.
@@ -284,7 +289,7 @@ func truncateString(s string, maxLen int) string {
 }
 
 // handleURLClick processes a mouse click and opens the URL if clicked on a URL region.
-// The URL is opened in a goroutine to avoid blocking the UI.
+// Returns a tea.Cmd that opens the URL asynchronously and can report errors.
 //
 // Parameters:
 //   - msg: Mouse message from Bubble Tea
@@ -292,7 +297,7 @@ func truncateString(s string, maxLen int) string {
 //   - urlOpener: URL opener implementation (for testing abstraction)
 //
 // Returns:
-//   - tea.Cmd (always nil currently)
+//   - tea.Cmd that opens the URL, or nil if no URL was clicked
 func handleURLClick(msg tea.MouseMsg, state StatusTableState, urlOpener ui.URLOpener) tea.Cmd {
 	// Convert mouse position to row/column
 	row := msg.Y
@@ -301,11 +306,28 @@ func handleURLClick(msg tea.MouseMsg, state StatusTableState, urlOpener ui.URLOp
 	// Check if click is within any URL region
 	for _, region := range state.URLRegions {
 		if row == region.Row && col >= region.ColStart && col <= region.ColEnd {
-			// Open URL in browser
-			go urlOpener.OpenURL(region.URL)
-			return nil
+			// Return a command that opens the URL
+			return func() tea.Msg {
+				err := urlOpener.OpenURL(region.URL)
+				if err != nil {
+					// Return error message that could be handled by the model
+					return urlOpenErrorMsg{url: region.URL, err: err}
+				}
+				return urlOpenedMsg{url: region.URL}
+			}
 		}
 	}
 
 	return nil
+}
+
+// urlOpenedMsg is sent when a URL is successfully opened.
+type urlOpenedMsg struct {
+	url string
+}
+
+// urlOpenErrorMsg is sent when opening a URL fails.
+type urlOpenErrorMsg struct {
+	url string
+	err error
 }
