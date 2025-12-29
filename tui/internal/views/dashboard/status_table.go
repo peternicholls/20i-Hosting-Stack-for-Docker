@@ -216,19 +216,21 @@ func formatURLField(container docker.Container, maxWidth int) (string, int, int)
 
 	// Highlight URLs for web services
 	isWebURL := strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")
-	
+
 	urlText := truncateString(url, maxWidth)
-	
+	// Store visual length before applying any styling (ANSI codes)
+	visualLength := len(urlText)
+
 	if isWebURL {
 		// Highlight in blue/underline
 		styled := lipgloss.NewStyle().
 			Foreground(ui.ColorAccent).
 			Underline(true).
 			Render(urlText)
-		return styled, 0, len(urlText)
+		return styled, 0, visualLength
 	}
 
-	return urlText, 0, len(urlText)
+	return urlText, 0, visualLength
 }
 
 // extractURL extracts the URL or port information from a container.
