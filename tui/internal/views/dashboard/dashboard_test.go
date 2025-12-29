@@ -230,3 +230,159 @@ func containsAny(s string, substrings ...string) bool {
 	return false
 }
 
+
+// TestDashboardModel_OutputStreaming tests the output streaming functionality
+func TestDashboardModel_OutputStreaming(t *testing.T) {
+t.Run("stackOutputMsg appends to composeOutput", func(t *testing.T) {
+model := NewModel(nil, "test-project")
+model.isStreaming = true
+
+msg := stackOutputMsg{Line: "Test output line", IsError: false}
+updatedModel, _ := model.Update(msg)
+
+if len(updatedModel.composeOutput) != 1 {
+t.Errorf("Expected 1 line in composeOutput, got %d", len(updatedModel.composeOutput))
+}
+
+if updatedModel.composeOutput[0] != "Test output line" {
+t.Errorf("Expected 'Test output line', got '%s'", updatedModel.composeOutput[0])
+}
+})
+
+t.Run("completion message transitions to status", func(t *testing.T) {
+model := NewModel(nil, "test-project")
+model.isStreaming = true
+model.rightPanelState = "output"
+
+msg := stackOutputMsg{Line: "[Complete]", IsError: false}
+updatedModel, _ := model.Update(msg)
+
+if !updatedModel.streamingComplete {
+t.Error("Expected streamingComplete to be true")
+}
+
+if updatedModel.isStreaming {
+t.Error("Expected isStreaming to be false")
+}
+
+// Verify last output contains completion marker
+if len(updatedModel.composeOutput) == 0 {
+t.Error("Expected composeOutput to contain completion message")
+} else if updatedModel.composeOutput[len(updatedModel.composeOutput)-1] != "[Complete]" {
+t.Error("Expected last output to be [Complete]")
+}
+})
+
+t.Run("multiple output messages accumulate", func(t *testing.T) {
+model := NewModel(nil, "test-project")
+model.isStreaming = true
+
+lines := []string{"Line 1", "Line 2", "Line 3"}
+for _, line := range lines {
+msg := stackOutputMsg{Line: line, IsError: false}
+model, _ = model.Update(msg)
+}
+
+if len(model.composeOutput) != 3 {
+t.Errorf("Expected 3 lines in composeOutput, got %d", len(model.composeOutput))
+}
+
+for i, expected := range lines {
+if model.composeOutput[i] != expected {
+t.Errorf("Line %d: expected '%s', got '%s'", i, expected, model.composeOutput[i])
+}
+}
+})
+
+t.Run("stackStatusRefreshMsg switches to status panel", func(t *testing.T) {
+model := NewModel(nil, "test-project")
+model.rightPanelState = "output"
+
+msg := stackStatusRefreshMsg{}
+updatedModel, _ := model.Update(msg)
+
+if updatedModel.rightPanelState != "status" {
+t.Errorf("Expected rightPanelState 'status', got '%s'", updatedModel.rightPanelState)
+}
+})
+
+t.Run("complete streaming flow transitions to status", func(t *testing.T) {
+// This test demonstrates the requirement:
+// "Dashboard transitions to status state after completion message"
+model := NewModel(nil, "test-project")
+model.rightPanelState = "output"
+model.isStreaming = true
+
+// Simulate streaming several lines
+lines := []string{
+"Container creating",
+"Container created",
+"Container starting",
+"[Complete]",
+}
+
+for i, line := range lines {
+msg := stackOutputMsg{Line: line, IsError: false}
+model, _ = model.Update(msg)
+
+// Before completion, should still be streaming
+if i < len(lines)-1 {
+if !model.isStreaming {
+t.Error("Should still be streaming before completion")
+}
+}
+}
+
+// After [Complete] message
+if model.isStreaming {
+t.Error("Expected isStreaming to be false after completion")
+}
+if !model.streamingComplete {
+t.Error("Expected streamingComplete to be true after completion")
+}
+
+// Verify all lines were captured in order
+if len(model.composeOutput) != 4 {
+t.Errorf("Expected 4 lines in composeOutput, got %d", len(model.composeOutput))
+}
+
+// Then handle the status refresh message that follows
+refreshMsg := stackStatusRefreshMsg{}
+model, _ = model.Update(refreshMsg)
+
+// Verify transition to status panel
+if model.rightPanelState != "status" {
+t.Errorf("Expected rightPanelState 'status', got '%s'", model.rightPanelState)
+}
+})
+}
+
+// TestDashboardModel_ComposeStreamStarted tests the composeStreamStartedMsg handler
+func TestDashboardModel_ComposeStreamStarted(t *testing.T) {
+model := NewModel(nil, "test-project")
+
+// Create a mock channel
+mockChan := make(chan string, 5)
+mockChan <- "Test line 1"
+mockChan <- "Test line 2"
+close(mockChan)
+
+msg := composeStreamStartedMsg{channel: mockChan}
+updatedModel, cmd := model.Update(msg)
+
+if !updatedModel.isStreaming {
+t.Error("Expected isStreaming to be true")
+}
+
+if updatedModel.outputChannel == nil {
+t.Error("Expected outputChannel to be set")
+}
+
+if len(updatedModel.composeOutput) != 0 {
+t.Error("Expected composeOutput to be empty (cleared)")
+}
+
+if cmd == nil {
+t.Error("Expected a command to be returned")
+}
+}
