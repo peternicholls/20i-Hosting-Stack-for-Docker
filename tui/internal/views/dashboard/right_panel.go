@@ -15,6 +15,12 @@ import (
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
 )
 
+// Cached styles for output panel to improve performance during frequent renders
+var (
+	completeStyle = lipgloss.NewStyle().Foreground(ui.ColorRunning).Bold(true)
+	errorStyle    = lipgloss.NewStyle().Foreground(ui.ColorError)
+)
+
 // renderRightPanel renders the right panel content based on the current state.
 // States:
 // - "preflight": Show public_html status and template installation option
@@ -167,14 +173,9 @@ func renderOutputPanel(composeOutput []string, width, height int) string {
 			
 			// Highlight completion and error messages
 			if line == "[Complete]" {
-				displayLine = lipgloss.NewStyle().
-					Foreground(ui.ColorRunning).
-					Bold(true).
-					Render(displayLine)
+				displayLine = completeStyle.Render(displayLine)
 			} else if strings.HasPrefix(line, "ERROR:") {
-				displayLine = lipgloss.NewStyle().
-					Foreground(ui.ColorError).
-					Render(displayLine)
+				displayLine = errorStyle.Render(displayLine)
 			}
 			
 			lines = append(lines, displayLine)

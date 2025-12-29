@@ -30,6 +30,10 @@ import (
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
 )
 
+// Status refresh delay after compose completion.
+// Allows time for containers to fully start before querying their status.
+const statusRefreshDelay = 2 * time.Second
+
 // DashboardModel represents the dashboard view state with three-panel layout.
 // It manages project detection, container status, and dynamic right panel rendering.
 type DashboardModel struct {
@@ -262,7 +266,7 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 			return m, tea.Batch(
 				loadContainersCmd(m.dockerClient, m.projectName),
 				func() tea.Msg {
-					time.Sleep(2 * time.Second)
+					time.Sleep(statusRefreshDelay)
 					return stackStatusRefreshMsg{}
 				},
 			)
