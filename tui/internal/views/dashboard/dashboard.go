@@ -275,10 +275,9 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 			// Delay allows containers to fully start before querying status
 			return m, tea.Batch(
 				loadContainersCmd(m.dockerClient, m.projectName),
-				func() tea.Msg {
-					time.Sleep(statusRefreshDelay)
+				tea.Tick(statusRefreshDelay, func(t time.Time) tea.Msg {
 					return stackStatusRefreshMsg{}
-				},
+				}),
 			)
 		}
 		
