@@ -256,6 +256,16 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		// Handle streaming output from compose operations
 		m.composeOutput = append(m.composeOutput, msg.Line)
 		
+		// Detect critical errors that should stop streaming
+		if strings.HasPrefix(msg.Line, "ERROR: Failed to start command") ||
+			strings.HasPrefix(msg.Line, "ERROR: Failed to create") {
+			m.streamingComplete = true
+			m.isStreaming = false
+			m.outputChannel = nil
+			m.lastStatusMsg = "Compose operation failed"
+			return m, nil
+		}
+		
 		// Detect completion
 		if msg.Line == "[Complete]" {
 			m.streamingComplete = true
@@ -362,26 +372,6 @@ func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {
 		}
 		containers, err := client.ListContainers(projectName)
 		return containerListMsg{containers: containers, err: err}
-	}
-}
-
-// composeOutputCmd subscribes to the output channel from a streaming compose operation.
-// It returns a tea.Cmd that reads from the channel and sends stackOutputMsg for each line.
-// When the channel closes, it stops sending messages.
-func composeOutputCmd(outputChan <-chan string) tea.Cmd {
-	return func() tea.Msg {
-		// Read next line from channel (blocks until available or closed)
-		line, ok := <-outputChan
-		if !ok {
-			// Channel closed, no more output
-			return nil
-		}
-		
-		// Send the line as a StackOutputMsg
-		return stackOutputMsg{
-			Line:    line,
-			IsError: strings.HasPrefix(line, "ERROR:"),
-		}
 	}
 }
 
@@ -539,6 +529,8 @@ func formatDockerError(err error, action, containerName string) string {
 
 // stackOutputMsg sent when streaming compose command output.
 type stackOutputMsg struct {
-Line    string // Line of output from compose command
-IsError bool   // True if from stderr
+	// Line of output from compose command
+	Line string
+	// True if from stderr
+	IsError bool
 }

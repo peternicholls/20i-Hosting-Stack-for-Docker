@@ -309,6 +309,9 @@ return
 
 // Start command
 if err := cmd.Start(); err != nil {
+// Close pipes to avoid resource leaks
+stdout.Close()
+stderr.Close()
 outputChan <- fmt.Sprintf("ERROR: Failed to start command: %v", err)
 return
 }
@@ -341,5 +344,10 @@ defer func() { done <- struct{}{} }()
 scanner := bufio.NewScanner(r)
 for scanner.Scan() {
 out <- scanner.Text()
+}
+
+// Check for scanner errors
+if err := scanner.Err(); err != nil {
+out <- fmt.Sprintf("ERROR: Stream read error: %v", err)
 }
 }
