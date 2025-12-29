@@ -105,7 +105,7 @@ func renderStatusTable(containers []docker.Container, width, height int) (string
 		// URL/Port (plain text for now, will style entire row)
 		url := extractURL(container)
 		urlText := truncateString(url, colURL)
-		
+
 		// Track URL region if present
 		if url != "" {
 			// Calculate column offset: service + status + image + spacing
@@ -157,7 +157,7 @@ func renderStatusTable(containers []docker.Container, width, height int) (string
 //   - Rendered and colored CPU bar
 func renderCPUBar(cpuPercent float64, width int) string {
 	bar := renderCPUBarPlain(cpuPercent, width)
-	
+
 	// Color based on usage
 	style := lipgloss.NewStyle()
 	if cpuPercent > 80 {
@@ -196,7 +196,7 @@ func renderCPUBarPlain(cpuPercent float64, width int) string {
 //   - Styled status badge string
 func getStatusBadge(status docker.ContainerStatus) string {
 	text := getStatusText(status)
-	
+
 	var style lipgloss.Style
 	switch status {
 	case docker.StatusRunning:

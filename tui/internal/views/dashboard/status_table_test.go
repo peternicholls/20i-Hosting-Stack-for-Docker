@@ -165,12 +165,12 @@ func TestHandleURLClick_InsideRegion(t *testing.T) {
 
 	// Execute the command to trigger URL opening
 	result := cmd()
-	
+
 	// Verify the URL was opened
 	if len(mockOpener.OpenedURLs) != 1 {
 		t.Errorf("Expected 1 URL to be opened, got %d", len(mockOpener.OpenedURLs))
 	}
-	
+
 	if len(mockOpener.OpenedURLs) > 0 && mockOpener.OpenedURLs[0] != "http://localhost:80" {
 		t.Errorf("Expected URL 'http://localhost:80', got '%s'", mockOpener.OpenedURLs[0])
 	}

@@ -25,7 +25,7 @@ func TestSanitizeProjectName(t *testing.T) {
 		{"spec: 123-test", "123-test", "test-123"},
 		{"spec: empty string", "", "project"},
 		{"spec: only hyphens", "---", "project"},
-		
+
 		// Additional edge cases
 		{"simple lowercase", "myproject", "myproject"},
 		{"uppercase to lowercase", "MyProject", "myproject"},

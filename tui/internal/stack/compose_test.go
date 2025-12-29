@@ -206,7 +206,7 @@ func TestComposeEnvironmentBuilding(t *testing.T) {
 		// Note: We can't fully test command execution without docker,
 		// but we can test that the function handles missing docker gracefully
 		result := ComposeUp(composeFile, projectDir)
-		
+
 		// The command will fail without docker, but we can verify it tried
 		// to execute with the correct setup
 		if result == nil {
@@ -226,7 +226,7 @@ func TestComposeEnvironmentBuilding(t *testing.T) {
 	t.Run("validate STACK_FILE before execution", func(t *testing.T) {
 		// Test with invalid stack file
 		result := ComposeUp("/nonexistent/docker-compose.yml", tempDir)
-		
+
 		if result.Success {
 			t.Error("expected failure for non-existent stack file")
 		}
@@ -241,7 +241,7 @@ func TestComposeEnvironmentBuilding(t *testing.T) {
 	t.Run("default codeDir to current directory", func(t *testing.T) {
 		// Test with empty codeDir (should default to current directory)
 		result := ComposeUp(composeFile, "")
-		
+
 		if result == nil {
 			t.Error("expected non-nil result")
 		}
@@ -267,7 +267,7 @@ func TestComposeDown(t *testing.T) {
 
 	t.Run("validate STACK_FILE before execution", func(t *testing.T) {
 		result := ComposeDown("/nonexistent/docker-compose.yml", tempDir)
-		
+
 		if result.Success {
 			t.Error("expected failure for non-existent stack file")
 		}
@@ -284,7 +284,7 @@ func TestComposeDown(t *testing.T) {
 		}
 
 		result := ComposeDown(composeFile, projectDir)
-		
+
 		if result == nil {
 			t.Error("expected non-nil result")
 		}
@@ -308,7 +308,7 @@ func TestComposeRestart(t *testing.T) {
 
 	t.Run("validate STACK_FILE before execution", func(t *testing.T) {
 		result := ComposeRestart("/nonexistent/docker-compose.yml", tempDir)
-		
+
 		if result.Success {
 			t.Error("expected failure for non-existent stack file")
 		}
@@ -325,7 +325,7 @@ func TestComposeRestart(t *testing.T) {
 		}
 
 		result := ComposeRestart(composeFile, projectDir)
-		
+
 		if result == nil {
 			t.Error("expected non-nil result")
 		}
@@ -349,7 +349,7 @@ func TestComposeDestroy(t *testing.T) {
 
 	t.Run("validate STACK_FILE before execution", func(t *testing.T) {
 		result := ComposeDestroy("/nonexistent/docker-compose.yml", tempDir)
-		
+
 		if result.Success {
 			t.Error("expected failure for non-existent stack file")
 		}
@@ -366,7 +366,7 @@ func TestComposeDestroy(t *testing.T) {
 		}
 
 		result := ComposeDestroy(composeFile, projectDir)
-		
+
 		if result == nil {
 			t.Error("expected non-nil result")
 		}

@@ -160,7 +160,7 @@ func renderOutputPanel(composeOutput []string, width, height int) string {
 			// Check styling conditions before truncation
 			isComplete := line == "[Complete]"
 			isError := strings.HasPrefix(line, "ERROR:")
-			
+
 			// Truncate long lines to fit panel width
 			maxWidth := width - 6
 			if maxWidth < 3 {
@@ -174,14 +174,14 @@ func renderOutputPanel(composeOutput []string, width, height int) string {
 					displayLine = line[:maxWidth-3] + "..."
 				}
 			}
-			
+
 			// Apply styling based on original line content
 			if isComplete {
 				displayLine = completeStyle.Render(displayLine)
 			} else if isError {
 				displayLine = errorStyle.Render(displayLine)
 			}
-			
+
 			lines = append(lines, displayLine)
 		}
 	}

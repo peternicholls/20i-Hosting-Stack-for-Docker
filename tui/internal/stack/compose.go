@@ -85,7 +85,7 @@ func ComposeUp(stackFile, codeDir string) *ComposeResult {
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "up", "-d")
-	
+
 	// Set environment variables
 	cmd.Env = buildComposeEnv(codeDir)
 
@@ -135,7 +135,7 @@ func ComposeDown(stackFile, codeDir string) *ComposeResult {
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "down")
-	
+
 	// Set environment variables
 	cmd.Env = buildComposeEnv(codeDir)
 
@@ -185,7 +185,7 @@ func ComposeRestart(stackFile, codeDir string) *ComposeResult {
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "restart")
-	
+
 	// Set environment variables
 	cmd.Env = buildComposeEnv(codeDir)
 
@@ -236,7 +236,7 @@ func ComposeDestroy(stackFile, codeDir string) *ComposeResult {
 
 	// Build command
 	cmd := exec.Command("docker", "compose", "-f", stackFile, "down", "-v")
-	
+
 	// Set environment variables
 	cmd.Env = buildComposeEnv(codeDir)
 
@@ -271,82 +271,216 @@ func ComposeDestroy(stackFile, codeDir string) *ComposeResult {
 //   - <-chan string: Receive-only channel of output lines (closed on completion)
 //   - error: Validation error (if any) - errors during execution are sent as output lines
 func ComposeUpStreaming(stackFile, codeDir string) (<-chan string, error) {
-// Validate STACK_FILE before starting
-if err := ValidateStackFile(stackFile); err != nil {
-return nil, err
+	// Validate STACK_FILE before starting
+	if err := ValidateStackFile(stackFile); err != nil {
+		return nil, err
+	}
+
+	// Get effective code directory
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create buffered channel to prevent deadlock if consumer is slow
+	outputChan := make(chan string, composeOutputBufferSize)
+
+	// Start goroutine to execute command and stream output
+	go func() {
+		defer close(outputChan) // ALWAYS close channel on completion
+
+		// Build command
+		cmd := exec.Command("docker", "compose", "-f", stackFile, "up", "-d")
+		cmd.Env = buildComposeEnv(codeDir)
+
+		// Create pipes for stdout and stderr
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			outputChan <- fmt.Sprintf("ERROR: Failed to create stdout pipe: %v", err)
+			return
+		}
+
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			// Close stdout pipe to avoid resource leak if stderr pipe creation fails
+			stdout.Close()
+			outputChan <- fmt.Sprintf("ERROR: Failed to create stderr pipe: %v", err)
+			return
+		}
+
+		// Start command
+		if err := cmd.Start(); err != nil {
+			outputChan <- fmt.Sprintf("ERROR: Failed to start command: %v", err)
+			return
+		}
+
+		// Stream output from both stdout and stderr
+		done := make(chan struct{})
+		go streamLines(stdout, outputChan, done)
+		go streamLines(stderr, outputChan, done)
+
+		// Wait for both streams to complete
+		<-done
+		<-done
+
+		// Wait for command to finish
+		if err := cmd.Wait(); err != nil {
+			outputChan <- fmt.Sprintf("ERROR: Command failed: %v", err)
+		} else {
+			outputChan <- "[Complete]"
+		}
+	}()
+
+	return outputChan, nil
 }
 
-// Get effective code directory
-var err error
-codeDir, err = getEffectiveCodeDir(codeDir)
-if err != nil {
-return nil, err
+// ComposeDownStreaming stops the stack and streams output line-by-line.
+// It executes `docker compose -f $STACK_FILE down` with stdout/stderr pipes
+// and sends each output line through a buffered channel.
+//
+// Parameters:
+//   - stackFile: Path to the docker-compose.yml file
+//   - codeDir: Project code directory (defaults to current directory if empty)
+//
+// Returns:
+//   - <-chan string: Receive-only channel of output lines (closed on completion)
+//   - error: Validation error (if any) - errors during execution are sent as output lines
+func ComposeDownStreaming(stackFile, codeDir string) (<-chan string, error) {
+	return composeStreamingOperation(stackFile, codeDir, "down")
 }
 
-// Create buffered channel to prevent deadlock if consumer is slow
-outputChan := make(chan string, composeOutputBufferSize)
-
-// Start goroutine to execute command and stream output
-go func() {
-defer close(outputChan) // ALWAYS close channel on completion
-
-// Build command
-cmd := exec.Command("docker", "compose", "-f", stackFile, "up", "-d")
-cmd.Env = buildComposeEnv(codeDir)
-
-// Create pipes for stdout and stderr
-stdout, err := cmd.StdoutPipe()
-if err != nil {
-	outputChan <- fmt.Sprintf("ERROR: Failed to create stdout pipe: %v", err)
-	return
+// ComposeRestartStreaming restarts the stack and streams output line-by-line.
+// It executes `docker compose -f $STACK_FILE restart` with stdout/stderr pipes
+// and sends each output line through a buffered channel.
+//
+// Parameters:
+//   - stackFile: Path to the docker-compose.yml file
+//   - codeDir: Project code directory (defaults to current directory if empty)
+//
+// Returns:
+//   - <-chan string: Receive-only channel of output lines (closed on completion)
+//   - error: Validation error (if any) - errors during execution are sent as output lines
+func ComposeRestartStreaming(stackFile, codeDir string) (<-chan string, error) {
+	return composeStreamingOperation(stackFile, codeDir, "restart")
 }
 
-stderr, err := cmd.StderrPipe()
-if err != nil {
-	// Close stdout pipe to avoid resource leak if stderr pipe creation fails
-	stdout.Close()
-	outputChan <- fmt.Sprintf("ERROR: Failed to create stderr pipe: %v", err)
-	return
+// ComposeDestroyStreaming destroys the stack (including volumes) and streams output line-by-line.
+// It executes `docker compose -f $STACK_FILE down -v` with stdout/stderr pipes
+// and sends each output line through a buffered channel.
+// WARNING: This will delete all data in volumes!
+//
+// Parameters:
+//   - stackFile: Path to the docker-compose.yml file
+//   - codeDir: Project code directory (defaults to current directory if empty)
+//
+// Returns:
+//   - <-chan string: Receive-only channel of output lines (closed on completion)
+//   - error: Validation error (if any) - errors during execution are sent as output lines
+func ComposeDestroyStreaming(stackFile, codeDir string) (<-chan string, error) {
+	return composeStreamingOperation(stackFile, codeDir, "destroy")
 }
 
-// Start command
-if err := cmd.Start(); err != nil {
-	outputChan <- fmt.Sprintf("ERROR: Failed to start command: %v", err)
-	return
-}
+// composeStreamingOperation is a generic function for streaming compose operations.
+// It handles the common pattern of running docker compose with streaming output.
+//
+// Parameters:
+//   - stackFile: Path to the docker-compose.yml file
+//   - codeDir: Project code directory (defaults to current directory if empty)
+//   - operation: The operation to perform ("down", "restart", "destroy")
+//
+// Returns:
+//   - <-chan string: Receive-only channel of output lines (closed on completion)
+//   - error: Validation error (if any) - errors during execution are sent as output lines
+func composeStreamingOperation(stackFile, codeDir, operation string) (<-chan string, error) {
+	// Validate STACK_FILE before starting
+	if err := ValidateStackFile(stackFile); err != nil {
+		return nil, err
+	}
 
-// Stream output from both stdout and stderr
-done := make(chan struct{})
-go streamLines(stdout, outputChan, done)
-go streamLines(stderr, outputChan, done)
+	// Get effective code directory
+	var err error
+	codeDir, err = getEffectiveCodeDir(codeDir)
+	if err != nil {
+		return nil, err
+	}
 
-// Wait for both streams to complete
-<-done
-<-done
+	// Create buffered channel to prevent deadlock if consumer is slow
+	outputChan := make(chan string, composeOutputBufferSize)
 
-// Wait for command to finish
-if err := cmd.Wait(); err != nil {
-outputChan <- fmt.Sprintf("ERROR: Command failed: %v", err)
-} else {
-outputChan <- "[Complete]"
-}
-}()
+	// Start goroutine to execute command and stream output
+	go func() {
+		defer close(outputChan) // ALWAYS close channel on completion
 
-return outputChan, nil
+		// Build command based on operation
+		var cmd *exec.Cmd
+		switch operation {
+		case "down":
+			cmd = exec.Command("docker", "compose", "-f", stackFile, "down")
+		case "restart":
+			cmd = exec.Command("docker", "compose", "-f", stackFile, "restart")
+		case "destroy":
+			cmd = exec.Command("docker", "compose", "-f", stackFile, "down", "-v")
+		default:
+			outputChan <- fmt.Sprintf("ERROR: Unknown operation: %s", operation)
+			return
+		}
+
+		cmd.Env = buildComposeEnv(codeDir)
+
+		// Create pipes for stdout and stderr
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			outputChan <- fmt.Sprintf("ERROR: Failed to create stdout pipe: %v", err)
+			return
+		}
+
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			// Close stdout pipe to avoid resource leak if stderr pipe creation fails
+			stdout.Close()
+			outputChan <- fmt.Sprintf("ERROR: Failed to create stderr pipe: %v", err)
+			return
+		}
+
+		// Start command
+		if err := cmd.Start(); err != nil {
+			outputChan <- fmt.Sprintf("ERROR: Failed to start command: %v", err)
+			return
+		}
+
+		// Stream output from both stdout and stderr
+		done := make(chan struct{})
+		go streamLines(stdout, outputChan, done)
+		go streamLines(stderr, outputChan, done)
+
+		// Wait for both streams to complete
+		<-done
+		<-done
+
+		// Wait for command to finish
+		if err := cmd.Wait(); err != nil {
+			outputChan <- fmt.Sprintf("ERROR: Command failed: %v", err)
+		} else {
+			outputChan <- "[Complete]"
+		}
+	}()
+
+	return outputChan, nil
 }
 
 // streamLines reads lines from a reader and sends them to the output channel.
 // It signals completion on the done channel when the reader is exhausted.
 func streamLines(r io.Reader, out chan<- string, done chan<- struct{}) {
-defer func() { done <- struct{}{} }()
+	defer func() { done <- struct{}{} }()
 
-scanner := bufio.NewScanner(r)
-for scanner.Scan() {
-out <- scanner.Text()
-}
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		out <- scanner.Text()
+	}
 
-// Check for scanner errors
-if err := scanner.Err(); err != nil {
-out <- fmt.Sprintf("ERROR: Stream read error: %v", err)
-}
+	// Check for scanner errors
+	if err := scanner.Err(); err != nil {
+		out <- fmt.Sprintf("ERROR: Stream read error: %v", err)
+	}
 }

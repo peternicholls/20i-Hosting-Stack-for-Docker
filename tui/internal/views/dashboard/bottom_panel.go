@@ -67,11 +67,11 @@ func renderBottomPanel(rightPanelState string, statusMsg string, width int) stri
 func getAvailableCommands(rightPanelState string) string {
 	switch rightPanelState {
 	case "preflight":
-		return "Enter: install template  s: start stack  r: refresh"
+		return "s: start stack  t: install template  r: refresh"
 	case "output":
-		return "↑↓: scroll  s: stop stream  r: refresh"
+		return "Streaming compose output... (waiting for completion)"
 	case "status":
-		return "Click URL to open  r: refresh  s: stop stack"
+		return "t: stop stack  r: restart  d: destroy  Click URL to open"
 	default:
 		return "r: refresh"
 	}
