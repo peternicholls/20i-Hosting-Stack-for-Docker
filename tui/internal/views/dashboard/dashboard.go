@@ -163,8 +163,15 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		case "s":
 			// Start stack (only allowed when public_html exists)
 			if m.project != nil && m.project.HasPublicHTML {
-				// Check if already running/starting - ignore if so
-				if len(m.containers) > 0 {
+				// Check if any container is actually running (not just present)
+				running := false
+				for _, c := range m.containers {
+					if c.Status == docker.StatusRunning {
+						running = true
+						break
+					}
+				}
+				if running {
 					m.lastStatusMsg = "Stack is already running"
 					return m, nil
 				}
@@ -196,36 +203,56 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 				}
 
 				return m, installTemplateCmd(projectRoot)
-			} else if len(m.containers) > 0 {
-				// Stop stack (stack is running)
-				m.rightPanelState = "output"
-				m.composeOutput = []string{} // Clear previous output
-				m.lastStatusMsg = "Stopping stack..."
-
-				codeDir := m.codeDir
-				if codeDir == "" && m.project != nil {
-					codeDir = m.project.Path
+			} else {
+				// Check if any container is actually running
+				running := false
+				for _, c := range m.containers {
+					if c.Status == docker.StatusRunning {
+						running = true
+						break
+					}
 				}
+				if running {
+					// Stop stack (stack is running)
+					m.rightPanelState = "output"
+					m.composeOutput = []string{} // Clear previous output
+					m.lastStatusMsg = "Stopping stack..."
 
-				return m, startComposeDownCmd(m.stackFile, codeDir)
+					codeDir := m.codeDir
+					if codeDir == "" && m.project != nil {
+						codeDir = m.project.Path
+					}
+
+					return m, startComposeDownCmd(m.stackFile, codeDir)
+				}
 			}
 			return m, nil
 
 		case "r":
 			// Restart stack (only allowed when public_html exists and stack is running)
-			if m.project != nil && m.project.HasPublicHTML && len(m.containers) > 0 {
-				m.rightPanelState = "output"
-				m.composeOutput = []string{} // Clear previous output
-				m.lastStatusMsg = "Restarting stack..."
-
-				codeDir := m.codeDir
-				if codeDir == "" && m.project != nil {
-					codeDir = m.project.Path
+			if m.project != nil && m.project.HasPublicHTML {
+				// Check if any container is actually running
+				running := false
+				for _, c := range m.containers {
+					if c.Status == docker.StatusRunning {
+						running = true
+						break
+					}
 				}
+				if running {
+					m.rightPanelState = "output"
+					m.composeOutput = []string{} // Clear previous output
+					m.lastStatusMsg = "Restarting stack..."
 
-				return m, startComposeRestartCmd(m.stackFile, codeDir)
+					codeDir := m.codeDir
+					if codeDir == "" && m.project != nil {
+						codeDir = m.project.Path
+					}
+
+					return m, startComposeRestartCmd(m.stackFile, codeDir)
+				}
 			}
-			// If no containers, just refresh the container list
+			// If no containers running, just refresh the container list
 			return m, loadContainersCmd(m.dockerClient, m.projectName)
 
 		case "d":
@@ -236,20 +263,6 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 				m.firstInput = ""
 				m.secondInput = ""
 				return m, nil
-			}
-			return m, nil
-
-		case "enter":
-			// Install template in preflight mode (legacy support)
-			if m.rightPanelState == "preflight" && m.project != nil && !m.project.HasPublicHTML {
-				m.lastStatusMsg = "Installing template..."
-
-				projectRoot := m.project.Path
-				if projectRoot == "" {
-					projectRoot = m.codeDir
-				}
-
-				return m, installTemplateCmd(projectRoot)
 			}
 			return m, nil
 
@@ -444,19 +457,21 @@ func (m DashboardModel) handleModalKeys(msg tea.KeyMsg) (DashboardModel, tea.Cmd
 		} else if m.confirmationStage == 2 && len(m.secondInput) > 0 {
 			m.secondInput = m.secondInput[:len(m.secondInput)-1]
 		}
+		// Silently ignore backspace in invalid states
 		return m, nil
 
 	default:
 		// Handle printable characters (append to current input)
-		key := msg.String()
-		if len(key) == 1 {
-			// Single character - append to appropriate input
+		// Only accept actual rune input (single printable characters)
+		if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 {
+			char := string(msg.Runes[0])
 			if m.confirmationStage == 1 {
-				m.firstInput += key
+				m.firstInput += char
 			} else if m.confirmationStage == 2 {
-				m.secondInput += key
+				m.secondInput += char
 			}
 		}
+		// Silently ignore other key types (function keys, etc.)
 		return m, nil
 	}
 
@@ -528,11 +543,67 @@ func (m DashboardModel) View() string {
 		}
 
 		modal := ui.RenderConfirmationModal(m.confirmationStage, currentInput, m.width, m.height)
-		// Layer the modal over the base view
-		return modal
+		// Overlay the modal on top of the base view so dashboard remains visible
+		return overlayViews(baseView, modal)
 	}
 
 	return baseView
+}
+
+// overlayViews composes a modal view over a base view by treating spaces in the
+// overlay as transparent and non-space characters as opaque.
+// Both inputs are arbitrary multi-line strings; the result contains both views
+// with the overlay on top.
+func overlayViews(baseView, overlay string) string {
+	baseLines := strings.Split(baseView, "\n")
+	overlayLines := strings.Split(overlay, "\n")
+
+	maxLines := len(baseLines)
+	if len(overlayLines) > maxLines {
+		maxLines = len(overlayLines)
+	}
+
+	resultLines := make([]string, maxLines)
+
+	for i := 0; i < maxLines; i++ {
+		var baseLine, overlayLine string
+		if i < len(baseLines) {
+			baseLine = baseLines[i]
+		}
+		if i < len(overlayLines) {
+			overlayLine = overlayLines[i]
+		}
+
+		// Pad lines so they are the same length
+		maxLen := len(baseLine)
+		if len(overlayLine) > maxLen {
+			maxLen = len(overlayLine)
+		}
+
+		if len(baseLine) < maxLen {
+			baseLine = baseLine + strings.Repeat(" ", maxLen-len(baseLine))
+		}
+		if len(overlayLine) < maxLen {
+			overlayLine = overlayLine + strings.Repeat(" ", maxLen-len(overlayLine))
+		}
+
+		// Overlay character by character, treating space as transparent
+		baseBytes := []byte(baseLine)
+		overlayBytes := []byte(overlayLine)
+		out := make([]byte, len(baseBytes))
+
+		for j := 0; j < len(baseBytes); j++ {
+			if j < len(overlayBytes) && overlayBytes[j] != ' ' && overlayBytes[j] != 0 {
+				out[j] = overlayBytes[j]
+			} else {
+				out[j] = baseBytes[j]
+			}
+		}
+
+		resultLines[i] = string(out)
+	}
+
+	return strings.Join(resultLines, "\n")
 }
 
 func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {

@@ -61,7 +61,7 @@ func renderLeftPanel(proj *project.Project, stackRunning bool, width, height int
 	// Stack status
 	stackStatusLabel := lipgloss.NewStyle().Foreground(ui.ColorMuted).Render("Stack:")
 	lines = append(lines, stackStatusLabel)
-	
+
 	stackStatus := "Not Running"
 	stackStyle := lipgloss.NewStyle().Foreground(ui.ColorStopped)
 	if stackRunning {
@@ -75,7 +75,7 @@ func renderLeftPanel(proj *project.Project, stackRunning bool, width, height int
 		lines = append(lines, "")
 		htmlLabel := lipgloss.NewStyle().Foreground(ui.ColorMuted).Render("public_html:")
 		lines = append(lines, htmlLabel)
-		
+
 		htmlStatus := "Missing"
 		htmlStyle := lipgloss.NewStyle().Foreground(ui.ColorWarning)
 		if proj.HasPublicHTML {

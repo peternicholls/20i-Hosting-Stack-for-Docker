@@ -412,6 +412,11 @@ func TestDashboardModel_KeyHandlers(t *testing.T) {
 		if updatedModel.lastStatusMsg != "Starting stack..." {
 			t.Errorf("Expected status message 'Starting stack...', got '%s'", updatedModel.lastStatusMsg)
 		}
+
+		// Verify output buffer is cleared
+		if len(updatedModel.composeOutput) != 0 {
+			t.Errorf("Expected composeOutput to be empty, got %d items", len(updatedModel.composeOutput))
+		}
 	})
 
 	t.Run("S key does nothing when public_html missing", func(t *testing.T) {
@@ -507,6 +512,11 @@ func TestDashboardModel_KeyHandlers(t *testing.T) {
 		if updatedModel.lastStatusMsg != "Stopping stack..." {
 			t.Errorf("Expected status message 'Stopping stack...', got '%s'", updatedModel.lastStatusMsg)
 		}
+
+		// Verify output buffer is cleared
+		if len(updatedModel.composeOutput) != 0 {
+			t.Errorf("Expected composeOutput to be empty, got %d items", len(updatedModel.composeOutput))
+		}
 	})
 
 	t.Run("R key triggers restart when stack running", func(t *testing.T) {
@@ -535,6 +545,11 @@ func TestDashboardModel_KeyHandlers(t *testing.T) {
 
 		if updatedModel.lastStatusMsg != "Restarting stack..." {
 			t.Errorf("Expected status message 'Restarting stack...', got '%s'", updatedModel.lastStatusMsg)
+		}
+
+		// Verify output buffer is cleared
+		if len(updatedModel.composeOutput) != 0 {
+			t.Errorf("Expected composeOutput to be empty, got %d items", len(updatedModel.composeOutput))
 		}
 	})
 
@@ -697,6 +712,11 @@ func TestDashboardModel_ModalFlow(t *testing.T) {
 
 		if cmd == nil {
 			t.Error("Expected command to be returned for destroy")
+		}
+
+		// Verify output buffer is cleared
+		if len(updatedModel.composeOutput) != 0 {
+			t.Errorf("Expected composeOutput to be empty, got %d items", len(updatedModel.composeOutput))
 		}
 	})
 

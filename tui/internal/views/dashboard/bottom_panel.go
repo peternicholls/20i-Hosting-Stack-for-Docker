@@ -69,7 +69,7 @@ func getAvailableCommands(rightPanelState string) string {
 	case "preflight":
 		return "s: start stack  t: install template  r: refresh"
 	case "output":
-		return "Streaming output... (wait for completion)"
+		return "Streaming compose output... (waiting for completion)"
 	case "status":
 		return "t: stop stack  r: restart  d: destroy  Click URL to open"
 	default:
