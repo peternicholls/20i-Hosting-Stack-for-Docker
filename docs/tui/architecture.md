@@ -319,7 +319,7 @@ func TestDashboardUpdate_StartContainer(t *testing.T) {
 # Default (no Docker required)
 go test ./tests/integration/...
 
-# With live Docker (future)
+# With live Docker
 go test -tags=integration_docker ./tests/integration/...
 ```
 
