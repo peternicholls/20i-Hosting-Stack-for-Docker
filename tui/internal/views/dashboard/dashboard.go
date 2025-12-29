@@ -1,9 +1,20 @@
 // Project: 20i Stack Manager TUI
 // File: dashboard.go
-// Purpose: Dashboard model for container lifecycle view
+// Purpose: Dashboard model for three-panel layout with state-based rendering
 // Version: 0.1.0
 // Updated: 2025-12-28
 
+// Package dashboard provides a three-panel TUI dashboard for managing Docker stack lifecycle.
+//
+// The dashboard consists of:
+// - Left panel (25%): Project information and stack status
+// - Right panel (75%): Dynamic content based on state (preflight/output/status)
+// - Bottom panel (3 lines): Available commands and status messages
+//
+// The right panel switches between three states:
+// - "preflight": Pre-flight checks and template installation
+// - "output": Streaming Docker Compose output
+// - "status": Live container status table with clickable URLs
 package dashboard
 
 import (
@@ -13,12 +24,32 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/peternicholls/20i-stack/tui/internal/docker"
+	"github.com/peternicholls/20i-stack/tui/internal/project"
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
 )
 
-// Model represents the dashboard view state for Phase 3.
-type Model struct {
-	containers    []docker.Container
+// DashboardModel represents the dashboard view state with three-panel layout.
+// It manages project detection, container status, and dynamic right panel rendering.
+type DashboardModel struct {
+	// Project information
+	project *project.Project
+
+	// Container list
+	containers []docker.Container
+
+	// Right panel state: "preflight" | "output" | "status"
+	rightPanelState string
+
+	// Compose output for streaming display
+	composeOutput []string
+
+	// Status table state for URL click detection
+	tableState StatusTableState
+
+	// URL opener (injectable for testing)
+	urlOpener ui.URLOpener
+
+	// Legacy fields for compatibility
 	selectedIndex int
 	projectName   string
 	dockerClient  *docker.Client
@@ -28,32 +59,103 @@ type Model struct {
 	lastStatusMsg string
 }
 
-// NewModel creates a dashboard model with required dependencies.
-func NewModel(client *docker.Client, projectName string) Model {
-	return Model{
-		dockerClient: client,
-		projectName:  projectName,
-		width:        80,
-		height:       24,
+// Model is a legacy type alias for backward compatibility.
+type Model = DashboardModel
+
+// NewModel creates a new DashboardModel with the specified Docker client and project name.
+// The model is initialized with default dimensions (80x24) and the "preflight" panel state.
+//
+// Parameters:
+//   - client: Docker client for container operations (can be nil for testing)
+//   - projectName: Name of the Docker Compose project to monitor
+//
+// Returns:
+//   - A new DashboardModel ready for initialization via Init()
+func NewModel(client *docker.Client, projectName string) DashboardModel {
+	return DashboardModel{
+		dockerClient:    client,
+		projectName:     projectName,
+		width:           80,
+		height:          24,
+		rightPanelState: "preflight",
+		urlOpener:       &ui.DefaultURLOpener{},
 	}
 }
 
-// Init loads the initial container list.
-func (m Model) Init() tea.Cmd {
-	return loadContainersCmd(m.dockerClient, m.projectName)
+// Init triggers async project detection and initial container list load.
+// This method is called once when the dashboard model is first initialized.
+// It returns a batch command that runs both project detection and container listing in parallel.
+//
+// Returns:
+//   - tea.Cmd that performs async initialization tasks
+func (m DashboardModel) Init() tea.Cmd {
+	return tea.Batch(
+		detectProjectCmd(),
+		loadContainersCmd(m.dockerClient, m.projectName),
+	)
 }
 
 // Update handles incoming messages for the dashboard.
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+// This is the main event handler that processes:
+// - Window resize events (tea.WindowSizeMsg)
+// - Mouse clicks for URL opening (tea.MouseMsg)
+// - Keyboard input for navigation and actions (tea.KeyMsg)
+// - Project detection results (projectDetectedMsg)
+// - Container list updates (containerListMsg)
+// - Container action results (containerActionResultMsg)
+//
+// The Update method never blocks - all I/O operations are performed asynchronously via tea.Cmd.
+//
+// Parameters:
+//   - msg: The incoming Bubble Tea message to process
+//
+// Returns:
+//   - Updated model state and optional command to execute
+func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		return m, nil
 
+	case tea.MouseMsg:
+		// Handle URL clicks in status table
+		if msg.Type == tea.MouseLeft && msg.Button == tea.MouseButtonLeft && m.rightPanelState == "status" {
+			return m, handleURLClick(msg, m.tableState, m.urlOpener)
+		}
+		return m, nil
+
 	case tea.KeyMsg:
-		// Navigation keys (T051)
+		// State-specific key handling
 		switch msg.String() {
+		case "s":
+			// Start/stop stack based on state
+			if m.rightPanelState == "preflight" && m.project != nil && m.project.HasPublicHTML {
+				// Switch to output mode and start stack
+				m.rightPanelState = "output"
+				m.lastStatusMsg = "Starting stack..."
+				return m, nil // TODO: Add stack start command
+			} else if m.rightPanelState == "status" {
+				// Stop stack
+				m.rightPanelState = "output"
+				m.lastStatusMsg = "Stopping stack..."
+				return m, nil // TODO: Add stack stop command
+			}
+			return m, nil
+
+		case "r":
+			// Refresh - reload containers
+			return m, loadContainersCmd(m.dockerClient, m.projectName)
+
+		case "enter":
+			// Install template in preflight mode
+			if m.rightPanelState == "preflight" && m.project != nil && !m.project.HasPublicHTML {
+				m.lastStatusMsg = "Installing template..."
+				return m, nil // TODO: Add template install command
+			}
+			return m, nil
+
+		// Legacy navigation keys for compatibility
 		case "up", "k":
 			if m.selectedIndex > 0 {
 				m.selectedIndex--
@@ -64,31 +166,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				m.selectedIndex++
 			}
 			return m, nil
-
-		// Container action keys (T053-T054)
-		case "s":
-			// Toggle start/stop for selected container
-			if m.selectedIndex >= 0 && m.selectedIndex < len(m.containers) {
-				container := m.containers[m.selectedIndex]
-				action := "start"
-				if container.Status == docker.StatusRunning {
-					action = "stop"
-				}
-				return m, containerActionCmd(m.dockerClient, container.ID, action, container.Service)
-			}
-			return m, nil
-
-		case "r":
-			// Restart selected container
-			if m.selectedIndex >= 0 && m.selectedIndex < len(m.containers) {
-				container := m.containers[m.selectedIndex]
-				return m, containerActionCmd(m.dockerClient, container.ID, "restart", container.Service)
-			}
-			return m, nil
 		}
 
+	case projectDetectedMsg:
+		m.project = &msg.project
+		// Auto-switch to status if stack is running
+		if len(m.containers) > 0 {
+			m.rightPanelState = "status"
+		}
+		return m, nil
+
 	case containerActionResultMsg:
-		// Handle action results (T061)
+		// Handle action results (legacy compatibility)
 		m.lastStatusMsg = msg.message
 		if msg.success {
 			// Refresh container list after successful action
@@ -103,93 +192,115 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 
 		m.containers = msg.containers
+		
+		// Auto-switch panel state based on containers, but preserve "output" state
+		// Only transition between "preflight" and "status"
+		if m.rightPanelState != "output" {
+			if len(m.containers) > 0 && m.rightPanelState == "preflight" {
+				m.rightPanelState = "status"
+			} else if len(m.containers) == 0 && m.rightPanelState == "status" {
+				m.rightPanelState = "preflight"
+			}
+		}
+
 		if m.selectedIndex >= len(m.containers) {
 			m.selectedIndex = clampIndex(len(m.containers) - 1)
 		}
 		m.lastError = nil
+		return m, nil
+
+	case urlOpenedMsg:
+		// URL was successfully opened, update status message
+		m.lastStatusMsg = "Opened URL: " + msg.url
+		return m, nil
+
+	case urlOpenErrorMsg:
+		// URL opening failed, show error message
+		m.lastStatusMsg = "Failed to open URL: " + msg.err.Error()
+		return m, nil
 	}
 
 	return m, nil
 }
 
-// View renders the dashboard view with 2-panel layout (Phase 3: service list + status messages).
-// Phase 5 will expand to 3-panel layout (service list + detail panel + status messages).
-func (m Model) View() string {
+// View renders the three-panel dashboard layout.
+// Layout:
+// - Left panel (25% width): Project info, stack status
+// - Right panel (75% width): Dynamic content based on rightPanelState
+// - Bottom panel (3 lines): Commands and status messages
+//
+// The view is fully responsive and handles terminal resize events.
+// All rendering uses Lipgloss for styling - no raw ANSI codes.
+//
+// Returns:
+//   - String representation of the complete dashboard UI
+func (m DashboardModel) View() string {
 	// Calculate panel dimensions
-	// Service list: 30% width, full height minus header/footer
-	// Status panel: 70% width, full height minus header/footer
+	leftWidth := m.width * 25 / 100
+	rightWidth := m.width - leftWidth
+	bottomHeight := 3
+	mainHeight := m.height - bottomHeight
 
-	serviceListWidth := max(20, m.width*30/100)
-	statusPanelWidth := m.width - serviceListWidth
-	panelHeight := m.height - 4 // Reserve space for header (1) and footer (2)
+	// Check if stack is running
+	stackRunning := len(m.containers) > 0
 
-	// Render service list (left panel, 30%)
-	serviceList := renderServiceList(m.containers, m.selectedIndex, serviceListWidth, panelHeight)
+	// Render left panel
+	leftPanel := renderLeftPanel(m.project, stackRunning, leftWidth, mainHeight)
 
-	// Render status messages panel (right panel, 70%)
-	statusPanel := m.renderStatusPanel(statusPanelWidth, panelHeight)
+	// Render right panel
+	rightPanel := renderRightPanel(
+		m.rightPanelState,
+		m.project,
+		m.containers,
+		m.composeOutput,
+		&m.tableState,
+		rightWidth,
+		mainHeight,
+	)
 
 	// Join horizontally
 	mainContent := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		serviceList,
-		statusPanel,
+		leftPanel,
+		rightPanel,
 	)
 
-	// Render footer
-	footer := m.renderFooter()
+	// Render bottom panel
+	bottomPanel := renderBottomPanel(m.rightPanelState, m.lastStatusMsg, m.width)
 
 	// Join vertically
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		mainContent,
-		footer,
+		bottomPanel,
 	)
-}
-
-// renderStatusPanel renders the status messages panel (Phase 3: simple error/success display).
-func (m Model) renderStatusPanel(width, height int) string {
-	var content string
-
-	if m.lastError != nil {
-		// Show error message
-		content = "❌ Error: " + m.lastError.Error()
-	} else if len(m.containers) == 0 {
-		// No containers loaded yet
-		content = "ℹ Loading containers..."
-	} else {
-		// Show helpful hint
-		content = fmt.Sprintf("Selected: %s\n\nPress 's' to start/stop\nPress 'r' to restart",
-			m.getSelectedContainerName())
-	}
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ui.ColorBorder).
-		Width(width-4).
-		Height(height-2).
-		Padding(1, 2).
-		Render(content)
-}
-
-// renderFooter renders the keyboard shortcuts footer.
-func (m Model) renderFooter() string {
-	shortcuts := "↑↓/k/j:navigate  s:start/stop  r:restart  S:stop-all  R:restart-all  D:destroy  q:quit"
-	return ui.FooterStyle.Width(m.width).Render(shortcuts)
-}
-
-// getSelectedContainerName returns the name of the currently selected container.
-func (m Model) getSelectedContainerName() string {
-	if m.selectedIndex >= 0 && m.selectedIndex < len(m.containers) {
-		return m.containers[m.selectedIndex].Service
-	}
-	return "(none)"
 }
 
 func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {
 	return func() tea.Msg {
+		// Handle nil client (allowed for testing)
+		if client == nil {
+			return containerListMsg{containers: []docker.Container{}, err: nil}
+		}
 		containers, err := client.ListContainers(projectName)
 		return containerListMsg{containers: containers, err: err}
+	}
+}
+
+// detectProjectCmd triggers async project detection.
+func detectProjectCmd() tea.Cmd {
+	return func() tea.Msg {
+		proj, err := project.DetectProject()
+		if err != nil {
+			return projectDetectedMsg{
+				project: project.Project{
+					Name:          "unknown",
+					Path:          "",
+					HasPublicHTML: false,
+				},
+			}
+		}
+		return projectDetectedMsg{project: *proj}
 	}
 }
 
@@ -205,6 +316,11 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// projectDetectedMsg is sent when project detection completes.
+type projectDetectedMsg struct {
+	project project.Project
 }
 
 type containerListMsg struct {

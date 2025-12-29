@@ -1,8 +1,13 @@
 package dashboard
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/peternicholls/20i-stack/tui/internal/docker"
+	"github.com/peternicholls/20i-stack/tui/internal/project"
+	"github.com/peternicholls/20i-stack/tui/internal/ui"
 )
 
 func TestDashboardModel_Init(t *testing.T) {
@@ -23,3 +28,205 @@ func TestDashboardModel_Update_WindowSize(t *testing.T) {
 		t.Errorf("Expected height 40, got %d", updatedModel.height)
 	}
 }
+
+func TestDashboardModel_View_ThreePanelLayout(t *testing.T) {
+	model := NewModel(nil, "test-project")
+	model.width = 100
+	model.height = 30
+	model.rightPanelState = "preflight"
+
+	view := model.View()
+	if view == "" {
+		t.Error("View should return non-empty string")
+	}
+
+	// Check that view contains expected panel elements
+	if !containsAny(view, "Detecting...", "Pre-flight") {
+		t.Error("View should contain preflight panel content")
+	}
+}
+
+func TestDashboardModel_View_WithProject(t *testing.T) {
+	model := NewModel(nil, "test-project")
+	model.width = 100
+	model.height = 30
+	model.project = &project.Project{
+		Name:          "test-project",
+		Path:          "/home/user/test-project",
+		HasPublicHTML: true,
+	}
+	model.rightPanelState = "preflight"
+
+	view := model.View()
+
+	// Should show project name
+	if !containsAny(view, "test-project") {
+		t.Error("View should contain project name")
+	}
+
+	// Should show path (may be truncated, so check for partial match)
+	if !containsAny(view, "/home", "test-project", "user") {
+		t.Error("View should contain project path or parts of it")
+	}
+
+	// Should show public_html status
+	if !containsAny(view, "public_html", "Present") {
+		t.Error("View should show public_html status")
+	}
+}
+
+func TestDashboardModel_View_StatusPanel(t *testing.T) {
+	model := NewModel(nil, "test-project")
+	model.width = 100
+	model.height = 30
+	model.rightPanelState = "status"
+	model.containers = []docker.Container{
+		{
+			ID:      "abc123",
+			Service: "nginx",
+			Status:  docker.StatusRunning,
+			Image:   "nginx:latest",
+		},
+		{
+			ID:      "def456",
+			Service: "mariadb",
+			Status:  docker.StatusRunning,
+			Image:   "mariadb:10.11",
+		},
+	}
+
+	view := model.View()
+
+	// Should show service names
+	if !containsAny(view, "nginx", "mariadb") {
+		t.Error("View should contain service names")
+	}
+
+	// Should show status indicators
+	if !containsAny(view, "Running") {
+		t.Error("View should show running status")
+	}
+}
+
+func TestDashboardModel_Update_ProjectDetection(t *testing.T) {
+	model := NewModel(nil, "test-project")
+	
+	msg := projectDetectedMsg{
+		project: project.Project{
+			Name:          "detected-project",
+			Path:          "/home/user/project",
+			HasPublicHTML: true,
+		},
+	}
+
+	updatedModel, _ := model.Update(msg)
+
+	if updatedModel.project == nil {
+		t.Fatal("Project should be set after detection")
+	}
+
+	if updatedModel.project.Name != "detected-project" {
+		t.Errorf("Expected project name 'detected-project', got '%s'", updatedModel.project.Name)
+	}
+}
+
+func TestDashboardModel_Update_ContainerList(t *testing.T) {
+	model := NewModel(nil, "test-project")
+	model.rightPanelState = "preflight"
+
+	msg := containerListMsg{
+		containers: []docker.Container{
+			{ID: "123", Service: "nginx", Status: docker.StatusRunning},
+		},
+		err: nil,
+	}
+
+	updatedModel, _ := model.Update(msg)
+
+	if len(updatedModel.containers) != 1 {
+		t.Errorf("Expected 1 container, got %d", len(updatedModel.containers))
+	}
+
+	// Should auto-switch to status panel when containers are present
+	if updatedModel.rightPanelState != "status" {
+		t.Errorf("Expected rightPanelState 'status', got '%s'", updatedModel.rightPanelState)
+	}
+}
+
+func TestDashboardModel_MouseClick_URLRegion(t *testing.T) {
+	mockOpener := &ui.MockURLOpener{}
+	
+	model := NewModel(nil, "test-project")
+	model.urlOpener = mockOpener
+	model.rightPanelState = "status"
+	model.containers = []docker.Container{
+		{Service: "nginx", Status: docker.StatusRunning},
+	}
+
+	// Simulate rendering to populate table state
+	model.View()
+
+	// Simulate mouse click (this is a basic test - actual click detection is position-based)
+	msg := tea.MouseMsg{
+		Type:   tea.MouseLeft,
+		Button: tea.MouseButtonLeft,
+		X:      70,
+		Y:      2,
+	}
+
+	model.Update(msg)
+
+	// Note: In real usage, URL would be opened if click was on a URL region
+	// This test verifies the handler doesn't crash
+}
+
+func TestRightPanelState_Transitions(t *testing.T) {
+	tests := []struct {
+		name           string
+		initialState   string
+		containers     []docker.Container
+		expectedState  string
+	}{
+		{
+			name:          "preflight to status with containers",
+			initialState:  "preflight",
+			containers:    []docker.Container{{Service: "nginx"}},
+			expectedState: "status",
+		},
+		{
+			name:          "status to preflight with no containers",
+			initialState:  "status",
+			containers:    []docker.Container{},
+			expectedState: "preflight",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := NewModel(nil, "test-project")
+			model.rightPanelState = tt.initialState
+
+			msg := containerListMsg{
+				containers: tt.containers,
+				err:        nil,
+			}
+
+			updatedModel, _ := model.Update(msg)
+
+			if updatedModel.rightPanelState != tt.expectedState {
+				t.Errorf("Expected state '%s', got '%s'", tt.expectedState, updatedModel.rightPanelState)
+			}
+		})
+	}
+}
+
+// Helper function to check if a string contains any of the given substrings
+func containsAny(s string, substrings ...string) bool {
+	for _, substr := range substrings {
+		if strings.Contains(s, substr) {
+			return true
+		}
+	}
+	return false
+}
+
