@@ -6,6 +6,8 @@
 
 package app
 
+import "github.com/peternicholls/20i-stack/tui/internal/stack"
+
 // StatsMsg sent when container stats are updated
 type StatsMsg struct {
 	Timestamp int64
@@ -105,8 +107,8 @@ type StackDestroyMsg struct {
 
 // StackOutputMsg sent when streaming compose command output
 type StackOutputMsg struct {
-	Line      string // Line of output from compose command
-	IsError   bool   // True if from stderr
+	Line    string // Line of output from compose command
+	IsError bool   // True if from stderr
 	// TODO: Populate Timestamp from compose output when streaming is implemented in compose.go.
 	Timestamp int64 // Unix timestamp
 }
@@ -117,4 +119,10 @@ type StackStatusMsg struct {
 	Success   bool   // True if operation succeeded
 	Message   string // Human-readable status message
 	Error     error  // Error if operation failed
+}
+
+// StackContainersMsg sent when container list with URLs and CPU% is retrieved
+type StackContainersMsg struct {
+	Containers []stack.ContainerInfo // List of container information
+	Error      error                 // Error if retrieval failed
 }
