@@ -297,14 +297,16 @@ cmd.Env = buildComposeEnv(codeDir)
 // Create pipes for stdout and stderr
 stdout, err := cmd.StdoutPipe()
 if err != nil {
-outputChan <- fmt.Sprintf("ERROR: Failed to create stdout pipe: %v", err)
-return
+	outputChan <- fmt.Sprintf("ERROR: Failed to create stdout pipe: %v", err)
+	return
 }
 
 stderr, err := cmd.StderrPipe()
 if err != nil {
-outputChan <- fmt.Sprintf("ERROR: Failed to create stderr pipe: %v", err)
-return
+	// Close stdout pipe to avoid resource leak if stderr pipe creation fails
+	stdout.Close()
+	outputChan <- fmt.Sprintf("ERROR: Failed to create stderr pipe: %v", err)
+	return
 }
 
 // Start command
