@@ -69,13 +69,13 @@ func renderStatusTable(containers []docker.Container, width, height int) (string
 		Foreground(ui.ColorPrimary).
 		Padding(0, 1)
 
-	header := fmt.Sprintf("%-20s %-12s %-30s %-25s %-10s",
-		headerStyle.Render("Service"),
-		headerStyle.Render("Status"),
-		headerStyle.Render("Image"),
-		headerStyle.Render("URL/Port"),
-		headerStyle.Render("CPU%"),
-	)
+	header := headerStyle.Render(fmt.Sprintf("%-20s %-12s %-30s %-25s %-10s",
+		"Service",
+		"Status",
+		"Image",
+		"URL/Port",
+		"CPU%",
+	))
 	rows = append(rows, header)
 
 	// Separator
