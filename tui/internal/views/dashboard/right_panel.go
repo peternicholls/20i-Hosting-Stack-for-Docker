@@ -156,14 +156,28 @@ func renderOutputPanel(composeOutput []string, width, height int) string {
 			if maxWidth < 3 {
 				maxWidth = 3 // Minimum width for "..."
 			}
+			displayLine := line
 			if len(line) > maxWidth {
 				if maxWidth <= 3 {
-					line = "..."
+					displayLine = "..."
 				} else {
-					line = line[:maxWidth-3] + "..."
+					displayLine = line[:maxWidth-3] + "..."
 				}
 			}
-			lines = append(lines, line)
+			
+			// Highlight completion and error messages
+			if line == "[Complete]" {
+				displayLine = lipgloss.NewStyle().
+					Foreground(ui.ColorRunning).
+					Bold(true).
+					Render(displayLine)
+			} else if strings.HasPrefix(line, "ERROR:") {
+				displayLine = lipgloss.NewStyle().
+					Foreground(ui.ColorError).
+					Render(displayLine)
+			}
+			
+			lines = append(lines, displayLine)
 		}
 	}
 

@@ -25,6 +25,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/peternicholls/20i-stack/tui/internal/docker"
 	"github.com/peternicholls/20i-stack/tui/internal/project"
+	"github.com/peternicholls/20i-stack/tui/internal/stack"
 	"github.com/peternicholls/20i-stack/tui/internal/ui"
 )
 
@@ -42,6 +43,11 @@ type DashboardModel struct {
 
 	// Compose output for streaming display
 	composeOutput []string
+	
+	// Streaming state
+	isStreaming       bool
+	streamingComplete bool
+	outputChannel     <-chan string
 
 	// Status table state for URL click detection
 	tableState StatusTableState
@@ -53,6 +59,8 @@ type DashboardModel struct {
 	selectedIndex int
 	projectName   string
 	dockerClient  *docker.Client
+	stackFile     string // Path to docker-compose.yml
+	codeDir       string // Project code directory
 	width         int
 	height        int
 	lastError     error
@@ -72,9 +80,18 @@ type Model = DashboardModel
 // Returns:
 //   - A new DashboardModel ready for initialization via Init()
 func NewModel(client *docker.Client, projectName string) DashboardModel {
+	// Detect stack environment
+	stackEnv, err := stack.DetectStackEnv()
+	stackFile := ""
+	if err == nil && stackEnv != nil {
+		stackFile = stackEnv.StackFile
+	}
+	
 	return DashboardModel{
 		dockerClient:    client,
 		projectName:     projectName,
+		stackFile:       stackFile,
+		codeDir:         "", // Will be detected from project
 		width:           80,
 		height:          24,
 		rightPanelState: "preflight",
@@ -134,7 +151,14 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 				// Switch to output mode and start stack
 				m.rightPanelState = "output"
 				m.lastStatusMsg = "Starting stack..."
-				return m, nil // TODO: Add stack start command
+				
+				// Use project path as code directory
+				codeDir := m.codeDir
+				if codeDir == "" && m.project != nil {
+					codeDir = m.project.Path
+				}
+				
+				return m, startComposeUpCmd(m.stackFile, codeDir)
 			} else if m.rightPanelState == "status" {
 				// Stop stack
 				m.rightPanelState = "output"
@@ -170,6 +194,10 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 
 	case projectDetectedMsg:
 		m.project = &msg.project
+		// Set code directory from project path
+		if m.codeDir == "" && m.project != nil {
+			m.codeDir = m.project.Path
+		}
 		// Auto-switch to status if stack is running
 		if len(m.containers) > 0 {
 			m.rightPanelState = "status"
@@ -218,10 +246,54 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 		// URL opening failed, show error message
 		m.lastStatusMsg = "Failed to open URL: " + msg.err.Error()
 		return m, nil
+	
+	case stackOutputMsg:
+		// Handle streaming output from compose operations
+		m.composeOutput = append(m.composeOutput, msg.Line)
+		
+		// Detect completion
+		if msg.Line == "[Complete]" {
+			m.streamingComplete = true
+			m.isStreaming = false
+			m.outputChannel = nil
+			// Trigger status refresh and switch to status panel
+			return m, tea.Batch(
+				loadContainersCmd(m.dockerClient, m.projectName),
+				func() tea.Msg {
+					// Small delay to allow containers to start
+					return stackStatusRefreshMsg{}
+				},
+			)
+		}
+		
+		// Continue reading from the channel if streaming
+		if m.isStreaming && m.outputChannel != nil {
+			return m, waitForNextLineCmd(m.outputChannel)
+		}
+		
+		return m, nil
+	
+	case stackStatusRefreshMsg:
+		// Switch to status panel after streaming completes
+		m.rightPanelState = "status"
+		m.lastStatusMsg = "Stack started successfully"
+		return m, nil
+	
+	case composeStreamStartedMsg:
+		// Store the channel and start reading from it
+		m.outputChannel = msg.channel
+		m.isStreaming = true
+		m.composeOutput = []string{} // Clear previous output
+		m.streamingComplete = false
+		return m, waitForNextLineCmd(m.outputChannel)
 	}
 
 	return m, nil
 }
+
+// stackStatusRefreshMsg is sent to trigger a switch to status panel
+type stackStatusRefreshMsg struct{}
+
 
 // View renders the three-panel dashboard layout.
 // Layout:
@@ -286,6 +358,65 @@ func loadContainersCmd(client *docker.Client, projectName string) tea.Cmd {
 		return containerListMsg{containers: containers, err: err}
 	}
 }
+
+// composeOutputCmd subscribes to the output channel from a streaming compose operation.
+// It returns a tea.Cmd that reads from the channel and sends stackOutputMsg for each line.
+// When the channel closes, it stops sending messages.
+func composeOutputCmd(outputChan <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		// Read next line from channel (blocks until available or closed)
+		line, ok := <-outputChan
+		if !ok {
+			// Channel closed, no more output
+			return nil
+		}
+		
+		// Send the line as a StackOutputMsg
+		return stackOutputMsg{
+			Line:    line,
+			IsError: strings.HasPrefix(line, "ERROR:"),
+		}
+	}
+}
+
+// waitForNextLineCmd creates a recursive command that continues reading from the channel.
+// This allows non-blocking subscription to the output stream.
+func waitForNextLineCmd(outputChan <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		line, ok := <-outputChan
+		if !ok {
+			// Channel closed
+			return stackOutputMsg{Line: "[Complete]", IsError: false}
+		}
+		return stackOutputMsg{
+			Line:    line,
+			IsError: strings.HasPrefix(line, "ERROR:"),
+		}
+	}
+}
+
+// startComposeUpCmd starts a compose up operation with streaming output.
+// It returns the output channel and a command to start reading from it.
+func startComposeUpCmd(stackFile, codeDir string) tea.Cmd {
+	return func() tea.Msg {
+		outputChan, err := stack.ComposeUpStreaming(stackFile, codeDir)
+		if err != nil {
+			return stackOutputMsg{
+				Line:    fmt.Sprintf("ERROR: Failed to start compose: %v", err),
+				IsError: true,
+			}
+		}
+		
+		// Return a message that includes the channel
+		return composeStreamStartedMsg{channel: outputChan}
+	}
+}
+
+// composeStreamStartedMsg is sent when compose streaming begins.
+type composeStreamStartedMsg struct {
+	channel <-chan string
+}
+
 
 // detectProjectCmd triggers async project detection.
 func detectProjectCmd() tea.Cmd {
@@ -398,4 +529,10 @@ func formatDockerError(err error, action, containerName string) string {
 
 	// Generic fallback
 	return fmt.Sprintf("❌ Failed to %s '%s': %s", action, containerName, err)
+}
+
+// stackOutputMsg sent when streaming compose command output.
+type stackOutputMsg struct {
+Line    string // Line of output from compose command
+IsError bool   // True if from stderr
 }
