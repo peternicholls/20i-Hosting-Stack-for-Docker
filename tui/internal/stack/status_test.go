@@ -307,6 +307,66 @@ func TestCalculateCPUPercent(t *testing.T) {
 			},
 			expected: 20.0, // (2000000 - 1000000) / (20000000 - 10000000) * len(PercpuUsage) * 100 = 20%
 		},
+		{
+			name: "empty PercpuUsage falls back to 1 CPU",
+			stats: &container.StatsResponse{
+				CPUStats: container.CPUStats{
+					CPUUsage: container.CPUUsage{
+						TotalUsage:  2000000,
+						PercpuUsage: []uint64{}, // Empty slice
+					},
+					SystemUsage: 20000000,
+					OnlineCPUs:  0, // No OnlineCPUs either
+				},
+				PreCPUStats: container.CPUStats{
+					CPUUsage: container.CPUUsage{
+						TotalUsage: 1000000,
+					},
+					SystemUsage: 10000000,
+				},
+			},
+			expected: 10.0, // (2000000 - 1000000) / (20000000 - 10000000) * 1 * 100 = 10%
+		},
+		{
+			name: "nil PercpuUsage falls back to 1 CPU",
+			stats: &container.StatsResponse{
+				CPUStats: container.CPUStats{
+					CPUUsage: container.CPUUsage{
+						TotalUsage:  2000000,
+						PercpuUsage: nil, // Nil slice
+					},
+					SystemUsage: 20000000,
+					OnlineCPUs:  0,
+				},
+				PreCPUStats: container.CPUStats{
+					CPUUsage: container.CPUUsage{
+						TotalUsage: 1000000,
+					},
+					SystemUsage: 10000000,
+				},
+			},
+			expected: 10.0, // (2000000 - 1000000) / (20000000 - 10000000) * 1 * 100 = 10%
+		},
+		{
+			name: "OnlineCPUs takes precedence over PercpuUsage",
+			stats: &container.StatsResponse{
+				CPUStats: container.CPUStats{
+					CPUUsage: container.CPUUsage{
+						TotalUsage:  2000000,
+						PercpuUsage: []uint64{500000, 500000}, // 2 CPUs in PercpuUsage
+					},
+					SystemUsage: 20000000,
+					OnlineCPUs:  4, // But OnlineCPUs says 4
+				},
+				PreCPUStats: container.CPUStats{
+					CPUUsage: container.CPUUsage{
+						TotalUsage: 1000000,
+					},
+					SystemUsage: 10000000,
+				},
+			},
+			expected: 40.0, // (2000000 - 1000000) / (20000000 - 10000000) * 4 * 100 = 40%
+		},
 	}
 
 	for _, tt := range tests {
