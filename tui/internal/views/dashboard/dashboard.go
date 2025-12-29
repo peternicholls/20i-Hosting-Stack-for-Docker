@@ -120,7 +120,7 @@ func (m DashboardModel) Update(msg tea.Msg) (DashboardModel, tea.Cmd) {
 
 	case tea.MouseMsg:
 		// Handle URL clicks in status table
-		if msg.Button == tea.MouseButtonLeft && m.rightPanelState == "status" {
+		if msg.Type == tea.MouseLeft && msg.Button == tea.MouseButtonLeft && m.rightPanelState == "status" {
 			handleURLClick(msg, m.tableState, m.urlOpener)
 		}
 		return m, nil
