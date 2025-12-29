@@ -58,6 +58,7 @@ func GetStackStatus(projectName string) ([]ContainerInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
+	defer cli.Close()
 
 	// Build filter for project
 	args := filters.NewArgs()
