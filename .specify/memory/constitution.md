@@ -81,6 +81,15 @@ Each project creates isolated container instances using `COMPOSE_PROJECT_NAME`. 
 - Feature branches: Named descriptively (`add-redis-support`, `fix-port-detection`)
 - PRs merge to default branch after review
 
+### Default Branch Protection (NON-NEGOTIABLE)
+The default branch (`main`/`master`) MUST be protected:
+- No direct pushes (PRs only)
+- At least 1 human approval required
+- Required status checks MUST pass (lint, compose validation, smoke test)
+- Branch must be up to date before merge
+
+**Rationale**: This constitution is only enforceable if the repository prevents bypassing review and checks.
+
 ### Testing Requirements
 Before opening a PR, contributors MUST:
 1. Run `scripts/setup-local.sh` in a fresh clone
@@ -96,12 +105,66 @@ All PRs require:
 - Updated documentation for user-facing changes
 - CHANGELOG entry for notable changes
 
-Automated reviews (Copilot, Gemini) provide suggestions but human review has final authority.
-
 ### Commit Hygiene
 - Small, focused commits with clear messages
-- Conventional commit format encouraged: `feat:`, `fix:`, `docs:`, `refactor:`
+- Conventional commits MUST be used for merged PR titles (and SHOULD be used for individual commits): `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
 - Avoid mixing unrelated changes in a single commit
+- Commit messages MUST describe intent and scope (avoid ambiguous messages like `update`)
+
+### Repository Hygiene (REQUIRED)
+The repository MUST include and maintain:
+- `.gitignore` covering Docker artifacts, logs, local overrides, and common OS/IDE files
+- `.gitattributes` enforcing consistent text handling (recommended: `text=auto eol=lf`)
+- `.editorconfig` for consistent whitespace and indentation
+- `LICENSE`
+- `CODEOWNERS` (even if it maps to a single maintainer)
+
+**Rationale**: Consistency and portability reduce friction for contributors and prevent accidental commits of local state.
+
+### Secrets & Local State (NON-NEGOTIABLE)
+- Secrets MUST NOT be committed under any circumstances.
+- `.env`, `.20i-local`, and any local secret files MUST be ignored by Git.
+- Only template configuration MAY be committed (e.g., `.env.example`, documented YAML defaults).
+- CI SHOULD include a basic secret scan and MUST fail if obvious credentials are detected.
+
+**Rationale**: The stack is designed for portability and reuse. Leaking credentials or committing local state undermines security and reproducibility.
+
+### Pull Request Standards (REQUIRED)
+All PRs MUST:
+- Have a single clear purpose (no drive-by refactors mixed with feature work)
+- Include a clear description of changes and motivation
+- Confirm manual testing steps were performed (see Testing Requirements)
+- Update documentation for user-facing changes
+- Include a CHANGELOG entry for notable changes
+
+Automated reviews (Copilot, Gemini) may provide suggestions but human review has final authority.
+
+### Releases, Tags, and Versioning
+- Every constitution amendment and notable user-facing change SHOULD be tagged with `vX.Y.Z`.
+- Release notes SHOULD be derived from `CHANGELOG` entries.
+- Breaking changes MUST include migration notes.
+
+**Rationale**: Tags provide stable reference points for users and make rollback and diagnosis practical.
+
+### CI Enforcement of Constitutional Invariants
+CI MUST, at minimum:
+- Validate Docker Compose configuration (`docker compose config`)
+- Run a minimal smoke test that brings the stack up and verifies core services start
+- Fail on prohibited hard-coded paths or credentials patterns where feasible
+
+**Rationale**: Manual review catches many issues, but CI is the consistent backstop.
+
+### Submodules and Vendored Code
+- Git submodules SHOULD be avoided unless there is strong justification.
+- Vendored third-party code MUST retain license headers and attribution.
+
+**Rationale**: Submodules and untracked licensing obligations are common sources of long-term maintenance and legal risk.
+
+### Dependency Update Discipline
+- Base images and key dependency versions SHOULD be reviewed on a regular cadence (recommended: monthly).
+- Security updates may be expedited, but MUST be documented and included in CHANGELOG.
+
+**Rationale**: This stack is infrastructure. Silent drift or stale images are reliability and security liabilities.
 
 ## Governance
 
