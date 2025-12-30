@@ -10,13 +10,18 @@
 
 **Organization**: Tasks are grouped by phase and user story. Phase 3a is the MVP (project-aware stack management). Phase 3b adds individual container management.
 
-**📚 Agent Guidance**: Before starting, review:
+**📚 Agent Must Read Guidance**: Before starting, review:
 - `/runbooks/research/QUICK-REFERENCE.md` - Keep this open while coding (cheat sheet)
 - `/runbooks/research/INDEX.md` - Find which detailed guide you need
 - `/runbooks/research/bubbletea-component-guide.md` - Component architecture patterns
 - `/runbooks/research/lipgloss-styling-reference.md` - Styling patterns and color palette
 - The TUI directory is `tui/` at the repository root
 - **CRITICAL**: Review `20i-gui` bash script to understand the project-aware workflow
+
+The following documents provide essential context for Phase 3 implementation:
+- `/specs/001-stack-manager-tui/PHASE3-ADR.md` - Architecture Decision Records for Phase 3
+- `/specs/001-stack-manager-tui/PHASE3-IMPLEMENTATION-NOTES.md` - Implementation notes and critical path
+- `/specs/001-stack-manager-tui/PHASE3-ROADMAP.md` - High-level roadmap and task dependencies
 
 **Documentation Expectations**: While implementing tasks, add Go doc comments for any exported types, functions, and packages you touch, and add brief inline comments only where logic is non-obvious.
 
@@ -37,6 +42,8 @@
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (US0, US1, US2, US3)
 - **File paths**: Exact paths from tui/ directory structure in plan.md
+
+NOW SKIP TO `PHASE 3a` BELOW
 
 ---
 
@@ -85,9 +92,11 @@
 
 ---
 
-## Phase 3a: Project-Aware Stack Management (MVP) 🎯 START HERE
+## Phase 3a: Project-Aware Stack Management (MVP) 🔄 IN PROGRESS
 
 **Goal**: Replicate 20i-gui core workflow in TUI - detect project, validate, start/stop stack
+
+**Status**: ~75% complete per audit dated 2025-12-30. Core functionality implemented, critical issues blocking release.
 
 **Core Workflow**:
 1. User runs TUI from web project directory (`cd ~/my-website/ && 20i-stack-manager`)
@@ -99,93 +108,307 @@
 
 **Independent Test**: Run TUI from a directory with `public_html/`, press `S`, verify stack starts and status table shows URLs
 
-### User Story 0: Project Detection & Pre-flight
+---
+
+## 🚨 REMEDIATION PRIORITY (2025-12-30 Audit)
+
+**Immediate Actions (Block Release)**:
+
+| Priority | Issue | Task | Fix | Time Est |
+|----------|-------|------|-----|----------|
+| 🔴 P0 | Mouse not enabled | AUDIT-C1, T180a | Add `tea.WithMouseCellMotion()` to main.go | 10 min |
+| 🔴 P0 | Alt screen not enabled | AUDIT-C2, T180b | Add `tea.WithAltScreen()` to main.go | 5 min |
+| 🔴 P0 | Help is hardcoded | AUDIT-C3, T182 | Create proper HelpModel component | 1 hr |
+
+**Before Beta**:
+
+| Priority | Issue | Task | Fix | Time Est |
+|----------|-------|------|-----|----------|
+| 🟠 P1 | Status refresh missing | AUDIT-H1, T160-T164 | Implement 5-second tea.Tick timer | 2 hr |
+| 🟠 P1 | Hardcoded URLs | AUDIT-H2, T122 | Read Container.Ports from Docker API | 1.5 hr |
+| 🟠 P1 | CPU% always 0% | AUDIT-H3, T123 | Show "N/A" or implement Docker stats API | 1 hr |
+| 🟠 P1 | Help text errors | AUDIT-H4 | Fix 't' → 'T' and 'r: refresh' → 'R: restart' | 15 min |
+
+**Before 1.0**:
+
+| Priority | Issue | Task | Fix | Time Est |
+|----------|-------|------|-----|----------|
+| 🟡 P2 | Terminal size check | AUDIT-M1 | Add FR-071 validation in root.go | 30 min |
+| 🟡 P2 | Docker error screen | AUDIT-M2 | Show error view instead of exit | 45 min |
+| 🟡 P2 | Layout border math | AUDIT-M3 | Subtract border width in panel calcs | 20 min |
+| 🟡 P2 | Missing docs | AUDIT-M4, T188a-f | Create /docs/tui/*.md files | 4 hr |
+
+**Quick Win Command** (fixes AUDIT-C1 + AUDIT-C2 in one edit):
+```go
+// tui/main.go - Change line 20-24 FROM:
+p := tea.NewProgram(rootModel)
+
+// TO:
+p := tea.NewProgram(rootModel,
+    tea.WithMouseCellMotion(),
+    tea.WithAltScreen(),
+)
+```
+## Task Summary
+
+### Phase 3a Completion Status (2025-12-30 Audit)
+
+| Section | Total | Complete | Incomplete | Blockers |
+|---------|-------|----------|------------|----------|
+| US0 (Project Detection) | 8 | 8 | 0 | - |
+| US1 (Stack Lifecycle) | 11 | 11 | 0 | - |
+| US2 (Container Status) | 6 | 4 | 2 | H2 (URLs), H3 (CPU%) |
+| Dashboard View | 8 | 7 | 1 | C1 (mouse) |
+| Keyboard Handling | 7 | 7 | 0 | - |
+| Output Streaming | 6 | 6 | 0 | - |
+| Status Refresh | 5 | 0 | 5 | **H1 (BLOCKER)** |
+| Error Handling | 3 | 1 | 2 | M2 (docker error) |
+| Integration | 11 | 3 | 8 | C2, C3, M4 |
+| **TOTAL Phase 3a** | **65** | **47** | **18** | **4 CRITICAL** |
+
+**Completion Rate**: ~72% (47/65 tasks complete)
+
+**Release Blockers** (must fix before v1.0):
+1. 🔴 **AUDIT-C1**: Mouse support not enabled (T180a)
+2. 🔴 **AUDIT-C2**: Alternate screen not enabled (T180b) 
+3. 🔴 **AUDIT-C3**: Help view is hardcoded string (T182)
+4. 🟠 **AUDIT-H1**: Status refresh not implemented (T160-T164)
+
+### Original Plan Totals
+
+- **Total Tasks**: 187 (includes comprehensive testing throughout all phases)
+- **Setup Phase**: 13 tasks (T001-T013) - includes test infrastructure
+- **Foundational Phase**: 17 tasks (T014-T025d) - includes foundation tests + architectural decisions
+- **User Story 2 (Lifecycle) - MVP**: 47 tasks (T026-T072) 🎯 - includes unit + integration tests
+- **User Story 4 (Destroy) - Baseline**: 17 tasks (T073-T089) ✅ - includes regression tests
+- **User Story 1 (Dashboard Enhancement)**: 21 tasks (T090-T110) - includes performance tests
+- **User Story 3 (Logs)**: 27 tasks (T111-T137) - includes streaming tests
+- **User Story 5 (Projects)**: 17 tasks (T138-T154) - includes e2e tests
+- **Polish Phase**: 28 tasks (T155-T182) - includes comprehensive test suite
+
+**Test Coverage Breakdown**:
+- Unit tests: ~30 tasks (Docker client, UI components, message handlers, entities)
+- Integration tests: ~15 tasks (lifecycle workflow, destroy workflow, logs streaming, projects)
+- Performance tests: ~5 tasks (stats refresh, log rendering, startup time, memory usage)
+- E2E tests: ~5 tasks (full user journeys using Bubble Tea test utilities)
+- Manual acceptance tests: ~5 tasks (per user story acceptance criteria)
+- Total test tasks: ~60 (33% of all tasks)
+
+**Parallel Opportunities**:
+- Setup: 4 tasks can run in parallel (Go modules, deps, test mocks)
+- Foundational: 5 tasks can run in parallel (Docker client + tests, root model + tests)
+- User Story 2: 12 tasks can run in parallel (Docker methods + tests, messages + tests, UI + tests)
+- User Story 4: 3 tasks can run in parallel (modal component + tests)
+- User Story 1: 8 tasks can run in parallel (entity/view/stats work + tests)
+- User Story 3: 6 tasks can run in parallel (log streaming + tests)
+- User Story 5: 5 tasks can run in parallel (project detection + tests)
+- Polish: 8 tasks can run in parallel (styling, e2e tests, docs)
+
+**Estimated Time with Testing** (US2+US4 baseline):
+- Single developer: 25-29 hours (includes writing tests + architectural decisions)
+- Team of 3: 12-14 hours (parallel execution after Foundational)
+
+**Test Execution Strategy**:
+- Run unit tests after each component implementation (`go test ./internal/...`)
+- Run integration tests at end of each user story phase
+- Run regression suite after each phase to ensure no breakage
+- Run full test suite (`make test-all`) before merging to main
+- Target: >85% code coverage for production readiness
+
+**Independent Test Criteria**:
+- **US1**: Dashboard displays 4 services with status icons and live CPU/memory bars
+- **US2**: Pressing 's' on apache stops it (gray), pressing again starts (green)
+- **US3**: Pressing 'l' opens logs, 'f' enables follow, new requests appear in real-time
+- **US4**: Pressing 'D' shows warning, typing "yes" removes all volumes and containers
+- **US5**: Pressing 'p' shows project list, selecting switches context, dashboard reloads
+
+**📚 Remember**: Keep `/runbooks/research/QUICK-REFERENCE.md` open while implementing ALL tasks!
+
+**Format Validation**: ✅ All 182 tasks follow strict checklist format:
+- ✅ Checkbox: `- [ ]` prefix on every task
+- ✅ Task ID: T001-T140 sequential (T141-T142 reserved for future)
+- ✅ [P] marker: Only on parallelizable tasks (different files, no blockers)
+- ✅ [Story] label: US1-US5 on all user story phase tasks
+- ✅ File paths: Exact paths included in descriptions (e.g., internal/docker/client.go)
+- ✅ No story label on Setup, Foundational, Polish phases (correct)
+
+---
+
+## Notes
+
+- **[P] tasks**: Different files, no dependencies within their phase - can run in parallel
+- **[Story] labels**: Map tasks to user stories for traceability and independent testing
+- **Checkpoints**: Stop after Phase 2, Phase 3, and Phase 6 to validate progress
+- **MVP scope**: Phases 1-4 replicate all 20i-gui CORE functionality (US2 Lifecycle + US4 Destroy) ✅
+- **Enhancements**: Phases 5-7 add monitoring (US1), logs (US3), multi-project (US5) beyond 20i-gui
+- **Production-ready**: Phase 8 adds documentation, error handling, polish
+- **Priority**: GET STACKS RUNNING FIRST (lifecycle), then add nice-to-haves (monitoring/logs)
+- **Tests**: Not included per spec (no TDD requirement, manual testing via quickstart.md)
+- **File organization**: All tasks reference exact file paths from plan.md structure
+- **Bubble Tea patterns**: Tasks follow Elm Architecture (Model-Update-View) per research findings
+- **Docker SDK**: All Docker operations use SDK (no shell commands) per contract
+- **Lipgloss**: All styling uses Lipgloss (no raw ANSI codes) per NFR requirements
+- **Audit Date**: 2025-12-30 - Full code review against Phase 3a spec completed
+
+---
+
+### 🚨 AUDIT ISSUES (2025-12-30) - Must Fix Before Release
+
+**CRITICAL Issues** (Block Release):
+
+- [ ] **AUDIT-C1** 🔴 Mouse support NOT enabled in main.go
+  - **Spec**: FR-063, FR-065 require `tea.WithMouseCellMotion()`
+  - **Location**: `tui/main.go` line 20-24
+  - **Fix**: Add `tea.WithMouseCellMotion()` to `tea.NewProgram()` call
+  - **Impact**: URL clicking completely non-functional despite handlers existing
+  - **Blocks**: T180a
+
+- [ ] **AUDIT-C2** 🔴 Alternate screen mode NOT enabled
+  - **Spec**: FR-015 requires alternate screen mode
+  - **Location**: `tui/main.go`
+  - **Fix**: Add `tea.WithAltScreen()` to `tea.NewProgram()` call
+  - **Impact**: TUI output clutters terminal scrollback after exit
+
+- [ ] **AUDIT-C3** 🔴 Help view is hardcoded string, not HelpModel component
+  - **Spec**: Component Architecture mandates proper tea.Model for help
+  - **Location**: `tui/internal/app/root.go` lines 94-114
+  - **Fix**: Create proper `internal/views/help/help.go` with HelpModel
+  - **Impact**: Violates Bubble Tea patterns, not context-aware
+
+**HIGH Issues** (Should Fix):
+
+- [ ] **AUDIT-H1** 🟠 Status refresh timer NOT implemented (FR-035)
+  - **Spec**: FR-035 requires 5-second auto-refresh while stack running
+  - **Location**: Missing from `dashboard.go`
+  - **Fix**: Implement `tea.Tick` based refresh cycle
+  - **Blocks**: T160-T164
+
+- [ ] **AUDIT-H2** 🟠 URL extraction uses hardcoded ports
+  - **Spec**: FR-031-033 require reading actual port mappings
+  - **Location**: `tui/internal/views/dashboard/status_table.go` lines 168-188
+  - **Fix**: Read Container.Ports from Docker API, not hardcoded 80/8081/3306
+  - **Impact**: Wrong URLs if user has custom port mappings
+
+- [ ] **AUDIT-H3** 🟠 CPU% always shows 0% (hardcoded)
+  - **Spec**: FR-034 requires actual CPU% display
+  - **Location**: `tui/internal/views/dashboard/status_table.go` line 127
+  - **Fix**: Either implement Docker stats API call OR show "N/A" until Phase 5
+  - **Note**: Spec clarifies stats are Phase 5, but current display is misleading
+
+- [ ] **AUDIT-H4** 🟠 Bottom panel command help text has errors
+  - **Location**: `tui/internal/views/dashboard/bottom_panel.go` line 64
+  - **Fix**: Change 't: install template' to 'T: install template' (uppercase)
+  - **Fix**: Change 'r: refresh' to 'R: restart' (actual behavior)
+
+**MEDIUM Issues** (Nice to Fix):
+
+- [ ] **AUDIT-M1** 🟡 Missing terminal size validation (FR-071)
+  - **Spec**: FR-071 requires error for terminal < 80x24
+  - **Fix**: Add size check in RootModel.Update() for WindowSizeMsg
+
+- [ ] **AUDIT-M2** 🟡 Docker daemon error exits immediately (FR-070)
+  - **Spec**: FR-070 requires error screen with retry hint
+  - **Location**: `tui/internal/app/root.go` NewRootModel()
+  - **Fix**: Show error view instead of returning error
+
+- [ ] **AUDIT-M3** 🟡 Three-panel layout math doesn't account for borders
+  - **Location**: `tui/internal/views/dashboard/dashboard.go` lines 347-361
+  - **Fix**: Subtract border width (2) from panel calculations
+
+- [ ] **AUDIT-M4** 🟡 Documentation files not created (T188a-T188f)
+  - Missing: `/docs/tui/user-guide.md`, `/docs/tui/troubleshooting.md`, `/docs/tui/architecture.md`
+  - Missing: CHANGELOG.md Phase 3a entries
+
+---
+
+### User Story 0: Project Detection & Pre-flight ✅ COMPLETE
 
 **Purpose**: Detect current directory as web project, validate public_html/ exists
 
-- [ ] T100 [US0] Create internal/project/detector.go with DetectProject() function
+- [X] T100 [US0] Create internal/project/detector.go with DetectProject() function ✅
   - Read `$PWD` as project root
   - Derive project name from directory basename
   - Return Project struct with Name, Path, HasPublicHTML fields
-- [ ] T101 [US0] Create internal/project/sanitize.go with SanitizeProjectName() function
+- [X] T101 [US0] Create internal/project/sanitize.go with SanitizeProjectName() function ✅
   - Port sanitization logic from 20i-gui `sanitize_project_name()` function
   - Lowercase, replace invalid chars with hyphens, ensure starts with letter/number
-- [ ] T102 [P] [US0] [TEST] Create internal/project/detector_test.go
+- [X] T102 [P] [US0] [TEST] Create internal/project/detector_test.go ✅
   - Test project detection with various directory structures
   - Test sanitization with edge cases (spaces, uppercase, special chars)
-- [ ] T103 [US0] Create internal/project/template.go with InstallTemplate() function
+- [X] T103 [US0] Create internal/project/template.go with InstallTemplate() function ✅
   - Copy contents of `demo-site-folder/public_html/` to current directory
   - Find demo-site-folder relative to STACK_HOME or executable path
-- [ ] T104 [P] [US0] [TEST] Create internal/project/template_test.go
+- [X] T104 [P] [US0] [TEST] Create internal/project/template_test.go ✅
   - Test template installation to temp directory
   - Test error handling when template not found
-- [ ] T105 [US0] Create Project struct in internal/project/types.go:
+- [X] T105 [US0] Create Project struct in internal/project/types.go ✅
   ```go
   type Project struct {
       Name          string  // Sanitized project name
       Path          string  // Absolute path to project directory
       HasPublicHTML bool    // Whether public_html/ exists
-      StackStatus   string  // "not-running" | "running" | "starting" | "stopping"
   }
   ```
-- [ ] T106 [US0] Add projectDetectedMsg to internal/app/messages.go
-- [ ] T107 [US0] Add templateInstalledMsg to internal/app/messages.go
-- [ ] T107a [US0] [DOC] Add godoc comments to project/ package files
+  - Note: StackStatus field deferred to Phase 5 per ADR-001
+- [X] T106 [US0] Add projectDetectedMsg to internal/app/messages.go ✅
+- [X] T107 [US0] Add templateInstalledMsg to internal/app/messages.go ✅
+- [X] T107a [US0] [DOC] Add godoc comments to project/ package files ✅
   - Package-level doc in detector.go explaining project detection workflow
   - Function-level docs for DetectProject(), SanitizeProjectName(), InstallTemplate()
   - Inline comments for sanitization regex logic
   - Document public_html validation rules
 
-**Checkpoint**: Project detection works, sanitization matches 20i-gui, template installation works
+**Checkpoint**: ✅ Project detection works, sanitization matches 20i-gui, template installation works
 
-### User Story 1: Stack Lifecycle
+### User Story 1: Stack Lifecycle ✅ COMPLETE
 
 **Purpose**: Start, stop, restart entire stack with proper environment variables
 
-- [ ] T108 [US1] Create internal/stack/env.go with STACK_FILE and STACK_HOME detection
+- [X] T108 [US1] Create internal/stack/env.go with STACK_FILE and STACK_HOME detection ✅
   - Check environment variables first
   - Fall back to executable-relative path
   - Match 20i-gui logic exactly
-- [ ] T109 [US1] Add STACK_FILE validation helper function in env.go
+- [X] T109 [US1] Add STACK_FILE validation helper function in env.go ✅
   - Return error if STACK_FILE not set and cannot be detected
   - Verify file exists and is readable
   - Use in ComposeUp/Down/Restart/Destroy before execution
-- [ ] T110 [US1] Create internal/stack/compose.go with ComposeUp() function
+- [X] T110 [US1] Create internal/stack/compose.go with ComposeUp() function ✅
   - Call STACK_FILE validation first
   - Build environment: `CODE_DIR=$(pwd)`, `COMPOSE_PROJECT_NAME={sanitized-name}`
   - Execute `docker compose -f $STACK_FILE up -d`
   - Return output channel for streaming
-- [ ] T111 [US1] Update ComposeDown() to validate STACK_FILE before execution
-- [ ] T112 [US1] Create internal/stack/compose.go ComposeDown() function
+- [X] T111 [US1] Update ComposeDown() to validate STACK_FILE before execution ✅
+- [X] T112 [US1] Create internal/stack/compose.go ComposeDown() function ✅
   - Execute `docker compose -f $STACK_FILE down`
   - Use same environment variables
-- [ ] T113 [US1] Create internal/stack/compose.go ComposeRestart() function
+- [X] T113 [US1] Create internal/stack/compose.go ComposeRestart() function ✅
   - Execute `docker compose -f $STACK_FILE restart`
-- [ ] T114 [US1] Create internal/stack/compose.go ComposeDestroy() function
+- [X] T114 [US1] Create internal/stack/compose.go ComposeDestroy() function ✅
   - Execute `docker compose -f $STACK_FILE down -v` (removes volumes)
-- [ ] T115 [P] [US1] [TEST] Create internal/stack/compose_test.go
+- [X] T115 [P] [US1] [TEST] Create internal/stack/compose_test.go ✅
   - Test environment variable building
   - Test command construction (mock exec)
-- [ ] T116 [US1] Add stackStartMsg, stackStopMsg, stackRestartMsg to messages.go
-- [ ] T117 [US1] Add stackOutputMsg for streaming compose output
-- [ ] T118 [US1] Add stackStatusMsg for operation results
-- [ ] T118a [US1] [DOC] Add godoc comments to stack/ package files
+  - Also: compose_streaming_test.go exists
+- [X] T116 [US1] Add stackStartMsg, stackStopMsg, stackRestartMsg to messages.go ✅
+- [X] T117 [US1] Add stackOutputMsg for streaming compose output ✅
+- [X] T118 [US1] Add stackStatusMsg for operation results ✅
+- [X] T118a [US1] [DOC] Add godoc comments to stack/ package files ✅
   - Package-level doc in compose.go explaining stack lifecycle operations
   - Document environment variable requirements (CODE_DIR, COMPOSE_PROJECT_NAME)
   - Function-level docs for ComposeUp/Down/Restart/Destroy
   - Inline comments for STACK_FILE validation logic
   - Document error cases and return values
 
-**Checkpoint**: Stack operations work with proper CODE_DIR and COMPOSE_PROJECT_NAME
+**Checkpoint**: ✅ Stack operations work with proper CODE_DIR and COMPOSE_PROJECT_NAME
 
-### User Story 2: Status Table with URLs
+### User Story 2: Status Table with URLs ⚠️ PARTIAL (see AUDIT-H2, AUDIT-H3)
 
 **Purpose**: Display running containers with access URLs and CPU%
 
-- [ ] T120 [US2] Create internal/stack/status.go with GetStackStatus() function
+- [X] T120 [US2] Create internal/stack/status.go with GetStackStatus() function ✅
   - Use Docker client to list containers by project label
   - Return list of ContainerInfo structs
-- [ ] T121 [US2] Create ContainerInfo struct:
+- [X] T121 [US2] Create ContainerInfo struct ✅
   ```go
   type ContainerInfo struct {
       Name      string  // e.g., "my-website-nginx-1"
@@ -197,155 +420,166 @@
       CPUPercent float64 // CPU usage percentage
   }
   ```
-- [ ] T122 [US2] Implement URL generation logic:
+- [X] T122 [US2] Implement URL generation logic ⚠️ HARDCODED (see AUDIT-H2)
   - nginx: `http://localhost:{HOST_PORT}` (default 80)
   - phpmyadmin: `http://localhost:{PMA_PORT}` (default 8081)
   - mariadb: `localhost:{MYSQL_PORT}` (no http)
   - apache: "internal" (proxied via nginx)
-- [ ] T123 [US2] Implement CPU% collection using Docker stats API
-- [ ] T123a [US2] Create internal/stack/platform.go with architecture detection
+  - **⚠️ ISSUE**: Currently hardcoded, not reading actual port mappings from Docker API
+- [ ] T123 [US2] Implement CPU% collection using Docker stats API ❌ NOT DONE (see AUDIT-H3)
+  - **⚠️ ISSUE**: CPU% is hardcoded to 0.0 in status_table.go line 127
+  - **Note**: Stats collection deferred to Phase 5, but should show "N/A" not 0%
+- [X] T123a [US2] Create internal/stack/platform.go with architecture detection ✅
   - Detect ARM64 vs x86_64 using runtime.GOARCH
   - Return appropriate phpMyAdmin image: `arm64v8/phpmyadmin:latest` (ARM) or `phpmyadmin:latest` (x86)
   - Add env var override: `PHPMYADMIN_IMAGE` to force specific image
-- [ ] T124 [P] [US2] [TEST] Create internal/stack/status_test.go
+- [X] T124 [P] [US2] [TEST] Create internal/stack/status_test.go ✅
   - Test container listing with mock client
   - Test URL generation for each service type
   - Test platform detection (mock GOARCH)
-- [ ] T125 [US2] Add stackContainersMsg to messages.go (list of ContainerInfo)
+- [X] T125 [US2] Add stackContainersMsg to messages.go (list of ContainerInfo) ✅
 
-**Checkpoint**: Can retrieve stack status with URLs and CPU%
+**Checkpoint**: ⚠️ Can retrieve stack status with URLs (hardcoded) - CPU% needs fix
 
-### Dashboard View: Three-Panel Layout
+### Dashboard View: Three-Panel Layout ✅ COMPLETE (minor issues noted)
 
 **Purpose**: Implement the three-panel TUI layout
 
-- [ ] T130 [US0] Create internal/views/dashboard/dashboard.go with DashboardModel
+- [X] T130 [US0] Create internal/views/dashboard/dashboard.go with DashboardModel ✅
   - Fields: project Project, containers []ContainerInfo, rightPanelState string
   - rightPanelState: "preflight" | "output" | "status"
-- [ ] T131 [US0] Implement DashboardModel.Init() - trigger project detection
-- [ ] T132 [US0] Create internal/views/dashboard/left_panel.go
+- [X] T131 [US0] Implement DashboardModel.Init() - trigger project detection ✅
+- [X] T132 [US0] Create internal/views/dashboard/left_panel.go ✅
   - Render project name with status icon (✅/⚠️/🔄)
   - Render project path
   - Render stack status (Not Running / Running / Starting)
-- [ ] T133 [P] [US0] Create internal/views/dashboard/bottom_panel.go
+- [X] T133 [P] [US0] Create internal/views/dashboard/bottom_panel.go ✅
   - Render available commands based on state
   - Render status messages
-- [ ] T134 [US0] Create internal/views/dashboard/right_panel.go
+  - **⚠️ ISSUE**: Command help text has errors (see AUDIT-H4)
+- [X] T134 [US0] Create internal/views/dashboard/right_panel.go ✅
   - Switch rendering based on rightPanelState
   - "preflight": Show public_html status, template option
   - "output": Show streaming compose output
   - "status": Show stack status table
-- [ ] T135 [US2] Create internal/views/dashboard/status_table.go
+- [X] T135 [US2] Create internal/views/dashboard/status_table.go ✅
   - Render table: Service | Status | Image | URL/Port | CPU%
   - Use block graph for CPU: ▓▓▓░░░░░░░
   - Highlight URLs for nginx and phpmyadmin
   - Track URL positions for mouse click detection
-- [ ] T135a [US2] Implement clickable URL support in status_table.go
+- [X] T135a [US2] Implement clickable URL support in status_table.go ✅
   - Detect mouse clicks on URL regions using tea.MouseMsg
   - Extract clicked URL from table position
   - Open URL in default browser using `open` (macOS) or `xdg-open` (Linux)
   - Show "Opening in browser..." feedback message
-- [ ] T135b [P] [US2] [TEST] Add tests for URL click detection
+  - **⚠️ BLOCKED**: Mouse events not delivered (see AUDIT-C1)
+- [X] T135b [P] [US2] [TEST] Add tests for URL click detection ✅
   - Test URL region calculation
   - Test mouse click coordinate mapping
-  - Mock browser open command
-- [ ] T136 [US0] Implement DashboardModel.View() with three-panel layout
+  - Mock browser open command (status_table_test.go exists)
+- [X] T136 [US0] Implement DashboardModel.View() with three-panel layout ✅
   - Left panel: 25% width (project info)
   - Right panel: 75% width (dynamic content)
   - Bottom panel: 3 lines (commands + status)
-- [ ] T137 [P] [TEST] Create internal/views/dashboard/dashboard_test.go
+  - **⚠️ ISSUE**: Layout math doesn't account for borders (see AUDIT-M3)
+- [X] T137 [P] [TEST] Create internal/views/dashboard/dashboard_test.go ✅
   - Test Init triggers project detection
   - Test View renders correct panel states
   - Test layout calculations
-- [ ] T137a [US0] [DOC] Add godoc comments to views/dashboard/ package files
+- [X] T137a [US0] [DOC] Add godoc comments to views/dashboard/ package files ✅
   - Package-level doc explaining three-panel layout architecture
   - Document DashboardModel struct fields and their purposes
   - Function-level docs for panel rendering functions
   - Document rightPanelState transitions (preflight → output → status)
   - Inline comments for layout calculations
 
-**Checkpoint**: Three-panel layout renders correctly for all states
+**Checkpoint**: ✅ Three-panel layout renders correctly for all states (minor layout issues noted)
 
-### Keyboard Handling
+### Keyboard Handling ✅ COMPLETE
 
 **Purpose**: Implement S/T/R/D keys for stack operations
 
-- [ ] T140 [US1] Implement 'S' key handler in DashboardModel.Update()
+- [X] T140 [US1] Implement 'S' key handler in DashboardModel.Update() ✅
   - Only works if public_html exists
   - Trigger ComposeUp command
   - Switch right panel to "output" state
-- [ ] T141 [US0] Implement 'T' key handler
+- [X] T141 [US0] Implement 'T' key handler ✅
   - If public_html missing: trigger template installation
   - If stack running: trigger ComposeDown
   - Update right panel state accordingly
-- [ ] T142 [US1] Implement 'R' key handler - trigger ComposeRestart
-- [ ] T143 [US3] Implement 'D' key handler - show first destroy confirmation
-- [ ] T144 [US3] Create double-confirmation modal component in internal/ui/components.go
+- [X] T142 [US1] Implement 'R' key handler - trigger ComposeRestart ✅
+- [X] T143 [US3] Implement 'D' key handler - show first destroy confirmation ✅
+- [X] T144 [US3] Create double-confirmation modal component in internal/ui/components.go ✅
   - First modal: "⚠️ Destroy stack? Type 'yes' to continue"
   - Second modal: "🔴 Are you SURE? Type 'destroy' to confirm"
   - Both modals support Esc to cancel
   - Visual progression indicator (Step 1/2, Step 2/2)
-- [ ] T144a [US3] Add modal state tracking to DashboardModel
+- [X] T144a [US3] Add modal state tracking to DashboardModel ✅
   - confirmationStage: 0 (none) | 1 (first) | 2 (second)
   - firstInput, secondInput string fields
   - Reset on cancel or completion
-- [ ] T145 [US3] Implement double-confirmation flow
+- [X] T145 [US3] Implement double-confirmation flow ✅
   - First modal: On "yes" → advance to second modal
   - Second modal: On "destroy" → trigger ComposeDestroy
   - On Esc at any stage: cancel and close modals
   - On incorrect input: show error hint, remain in current modal
-- [ ] T146 [P] [TEST] Add key handler tests to dashboard_test.go
+- [X] T146 [P] [TEST] Add key handler tests to dashboard_test.go ✅
   - Test S key sends correct message
   - Test T key behavior in both states
   - Test D key shows first confirmation modal
   - Test double-confirmation flow (yes → destroy sequence)
   - Test cancel at each confirmation stage
-- [ ] T146a [P] [TEST] Add mouse handler tests to dashboard_test.go
+- [X] T146a [P] [TEST] Add mouse handler tests to dashboard_test.go ✅
   - Test mouse click on URL region
   - Test click outside URL region (no action)
   - Test scroll wheel events
+  - **Note**: Tests exist but mouse events not delivered (see AUDIT-C1)
 
-**Checkpoint**: All stack operation keys work correctly
+**Checkpoint**: ✅ All stack operation keys work correctly
 
-### Output Streaming
+### Output Streaming ✅ COMPLETE
 
 **Purpose**: Stream compose output to right panel during operations
 
-- [ ] T150 [US1] Implement compose output streaming in stack/compose.go
+- [X] T150 [US1] Implement compose output streaming in stack/compose.go ✅
   - Execute command with pipes
   - Send lines via channel
   - Close channel on completion
-- [ ] T151 [US1] Create composeOutputCmd in dashboard.go
+  - Also: ComposeUpStreaming, ComposeDownStreaming, ComposeRestartStreaming, ComposeDestroyStreaming
+- [X] T151 [US1] Create composeOutputCmd in dashboard.go ✅
   - Subscribe to output channel
   - Send stackOutputMsg for each line
-- [ ] T152 [US1] Implement stackOutputMsg handler in DashboardModel.Update()
+- [X] T152 [US1] Implement stackOutputMsg handler in DashboardModel.Update() ✅
   - Append line to output buffer
   - Scroll to bottom
-- [ ] T153 [US1] Implement output viewport in right_panel.go
-  - Use Bubbles viewport.Model for scrollable output
+- [X] T153 [US1] Implement output viewport in right_panel.go ✅
+  - Use scrollable output display
   - Show "[Complete]" when done
-- [ ] T154 [US1] Transition to status table when compose completes
+- [X] T154 [US1] Transition to status table when compose completes ✅
   - Detect completion message
   - Refresh container list
   - Switch right panel to "status" state
-- [ ] T155 [P] [TEST] Test output streaming with mock exec
+- [X] T155 [P] [TEST] Test output streaming with mock exec ✅
+  - compose_streaming_test.go exists
 
-**Checkpoint**: Compose output streams to UI, transitions to status table on completion
+**Checkpoint**: ✅ Compose output streams to UI, transitions to status table on completion
 
-### Status Refresh
+### Status Refresh ❌ NOT IMPLEMENTED (see AUDIT-H1)
 
 **Purpose**: Auto-refresh status table while stack is running
 
-- [ ] T160 [US2] Implement 5-second auto-refresh timer
+- [ ] T160 [US2] Implement 5-second auto-refresh timer ❌ NOT DONE
   - Only active when stack is running
   - Trigger GetStackStatus on tick
   - Return tea.Cmd that can be cancelled
-- [ ] T161 [US2] Implement stackContainersMsg handler
+  - **See AUDIT-H1**: This is a HIGH priority issue
+- [ ] T161 [US2] Implement stackContainersMsg handler ❌ NOT DONE
   - Update containers list
   - Re-render status table
-- [ ] T162 [US2] Implement CPU% collection in refresh cycle
+- [ ] T162 [US2] Implement CPU% collection in refresh cycle ❌ NOT DONE
   - Use Docker stats API (one-shot, not streaming)
-- [ ] T163 [US2] Implement timer cleanup
+  - **Note**: May defer to Phase 5 per spec clarification
+- [ ] T163 [US2] Implement timer cleanup ❌ NOT DONE
   - Cancel refresh timer when switching views (Esc, ?, p keys)
   - Cancel timer when stack stops
   - Prevent goroutine leaks
@@ -354,36 +588,45 @@
   - Test timer cancels when switching views
   - Test no goroutine leaks
 
-**Checkpoint**: Status table auto-refreshes every 5 seconds, cleanup prevents leaks
+**Checkpoint**: ❌ Status table auto-refresh NOT implemented - blocking release
 
-### Error Handling
+### Error Handling ⚠️ PARTIAL
 
 **Purpose**: User-friendly error messages for all failure cases
 
-- [ ] T170 Create internal/stack/errors.go with user-friendly error formatting
+- [X] T170 Create internal/stack/errors.go with user-friendly error formatting ⚠️ PARTIAL
   - Port conflict: "Port 80 is already in use. Stop the conflicting service or use a different port."
   - Docker not running: "Docker daemon is not running. Start Docker Desktop and try again."
   - Permission denied: "Permission denied. Run Docker as your user or check socket permissions."
-- [ ] T171 Implement error display in bottom panel
+  - **Note**: formatDockerError() exists in dashboard.go, but not in separate errors.go file
+- [X] T171 Implement error display in bottom panel ✅
   - Show ❌ prefix with red color
   - Clear after 5 seconds or on next action
+  - **Note**: Inline in lastStatusMsg display, works but basic
 - [ ] T172 [P] [TEST] Test error formatting with various Docker error types
 
-**Checkpoint**: All errors are user-friendly and actionable
+**Checkpoint**: ⚠️ Basic error handling exists, needs improvement
 
-### Integration & Polish
+### Integration & Polish ⚠️ PARTIAL (Critical issues block release)
 
 **Purpose**: Wire everything together, test end-to-end
 
-- [ ] T180 Wire DashboardModel into RootModel
+- [X] T180 Wire DashboardModel into RootModel ✅
   - Replace existing dashboard with new project-aware version
-- [ ] T180a Enable mouse support in main.go
+- [ ] T180a Enable mouse support in main.go ❌ CRITICAL - NOT DONE (see AUDIT-C1)
   - Add tea.WithMouseCellMotion() to tea.NewProgram() options
   - Add tea.WithMouseAllMotion() for comprehensive mouse tracking
   - Document mouse mode in code comments
-- [ ] T181 Implement '?' help key - show available commands
-- [ ] T182 Create help modal content for Phase 3a commands
-- [ ] T183 Update footer to show current state's commands
+  - **🔴 BLOCKS RELEASE**: URL clicking completely non-functional without this
+- [ ] T180b Enable alternate screen mode in main.go ❌ CRITICAL - NOT DONE (see AUDIT-C2)
+  - Add tea.WithAltScreen() to tea.NewProgram() options
+  - **NEW TASK** added per audit
+- [X] T181 Implement '?' help key - show available commands ⚠️ EXISTS BUT HARDCODED
+  - **See AUDIT-C3**: Help view is inline string, not proper HelpModel
+- [ ] T182 Create help modal content for Phase 3a commands ❌ NOT DONE
+  - Help should be proper component, not hardcoded string
+- [ ] T183 Update footer to show current state's commands ✅
+  - **⚠️ ISSUE**: Text has errors (see AUDIT-H4)
 - [ ] T184 [TEST] Create tests/integration/phase3a_test.go
   - Full workflow: detect project → start stack → show status → stop stack
   - Use mock Docker client
@@ -391,35 +634,35 @@
 - [ ] T186 [TEST] Manual test: Run TUI from empty directory, verify template creation works
 - [ ] T187 [TEST] Run `make test` - all tests must pass
 - [ ] T188 Update tui/README.md with Phase 3a usage instructions
-- [ ] T188a [DOC] Create /docs/tui/user-guide.md
+- [ ] T188a [DOC] Create /docs/tui/user-guide.md ❌ NOT DONE
   - Installation instructions (go install, binary download)
   - Quick start: cd to project, run TUI, start stack
   - Keyboard shortcuts reference (copy from spec.md)
   - Mouse usage guide (clickable URLs, scroll wheel)
   - Pre-flight troubleshooting (missing public_html, template creation)
   - Common workflows (start/stop/restart/destroy)
-- [ ] T188b [DOC] Create /docs/tui/troubleshooting.md
+- [ ] T188b [DOC] Create /docs/tui/troubleshooting.md ❌ NOT DONE
   - Docker daemon not running
   - Port conflicts (80, 3306, 8081)
   - Permission errors
   - STACK_FILE not found
   - Terminal too small
   - Browser not opening for URLs
-- [ ] T188c [DOC] Create /docs/tui/architecture.md
+- [ ] T188c [DOC] Create /docs/tui/architecture.md ❌ NOT DONE
   - Bubble Tea framework overview
   - Three-panel layout design
   - Message flow diagrams
   - Component hierarchy
   - State management patterns
   - Integration with docker-compose
-- [ ] T188d [DOC] Update main README.md with TUI section
+- [ ] T188d [DOC] Update main README.md with TUI section ❌ NOT DONE
   - Add "Terminal UI" section after GUI section
   - Installation: `go install github.com/peternicholls/20i-stack/tui@latest`
   - Quick start: `cd ~/my-project && 20i-stack-manager`
   - Link to /docs/tui/user-guide.md for details
   - Screenshot/ASCII art of TUI (copy from spec.md visual design)
   - Keyboard shortcuts summary table
-- [ ] T188e [DOC] Update CHANGELOG.md with Phase 3a features
+- [ ] T188e [DOC] Update CHANGELOG.md with Phase 3a features ❌ NOT DONE
   - Add "[Unreleased]" section if not exists
   - Under "### Added":
     - Terminal UI (TUI) with project-aware stack management
@@ -431,14 +674,14 @@
   - Under "### Changed":
     - Enhanced user feedback for all stack operations
   - Follow keepachangelog.com format
-- [ ] T188f [DOC] Add inline documentation audit
+- [ ] T188f [DOC] Add inline documentation audit ❌ NOT DONE
   - Review all exported types have godoc comments
   - Review complex functions have "why" comments
   - Verify message types documented in messages.go
   - Check error handling has explanatory comments
   - Ensure Bubble Tea patterns are commented for future developers
 
-**Checkpoint**: ✅ Phase 3a MVP COMPLETE - Full 20i-gui workflow replicated in TUI
+**Checkpoint**: ⚠️ Phase 3a ~75% complete - CRITICAL issues block release (AUDIT-C1, AUDIT-C2, AUDIT-C3)
 
 ---
 
@@ -478,9 +721,9 @@ These phases are planned for after Phase 3a MVP is stable and will be defined in
 
 - **Phase 1 (Setup)**: ✅ COMPLETE - No dependencies
 - **Phase 2 (Foundational)**: ✅ COMPLETE - Depends on Phase 1
-- **Phase 3a (Project-Aware MVP)**: 🎯 CURRENT - Depends on Phase 2
-- **Phase 3b (Container Lifecycle)**: Depends on Phase 3a
-- **Phase 4+ (Enhancements)**: Depends on Phase 3a
+- **Phase 3a (Project-Aware MVP)**: 🔄 ~75% COMPLETE - Critical issues blocking release (see AUDIT section)
+- **Phase 3b (Container Lifecycle)**: Depends on Phase 3a completion
+- **Phase 4+ (Enhancements)**: Depends on Phase 3a completion
 
 ### Phase 3a Task Groups (Recommended Order)
 
@@ -507,39 +750,41 @@ These phases are planned for after Phase 3a MVP is stable and will be defined in
 ## Task Summary
 
 - **Phase 1**: 13 tasks ✅ COMPLETE
-- **Phase 2**: 14 tasks ✅ COMPLETE
-- **Phase 3a**: 61 tasks 🎯 CURRENT (T100-T188f)
-  - Project Detection: 9 tasks (T100-T107a) — includes godoc
-  - Stack Lifecycle: 12 tasks (T108-T118a) — includes STACK_FILE validation + godoc
-  - Status Table: 9 tasks (T120-T125, T135a-T135b) — includes platform detection + clickable URLs
-  - Dashboard View: 9 tasks (T130-T137a) — includes godoc
-  - Keyboard Handling: 9 tasks (T140-T146a) — includes double-confirmation + mouse support
-  - Output Streaming: 6 tasks (T150-T155)
-  - Status Refresh: 5 tasks (T160-T164) — includes timer cleanup
-  - Error Handling: 3 tasks (T170-T172)
-  - Integration: 16 tasks (T180-T188f) — includes mouse + comprehensive docs
+- **Phase 2**: 14 tasks ✅ COMPLETE  
+- **Phase 3a**: 62 tasks 🔄 ~75% COMPLETE (T100-T188f + AUDIT issues)
+  - **AUDIT Issues**: 11 tasks (AUDIT-C1 to AUDIT-M4) - **4 CRITICAL, 4 HIGH, 4 MEDIUM**
+  - Project Detection: 9 tasks (T100-T107a) — ✅ COMPLETE
+  - Stack Lifecycle: 12 tasks (T108-T118a) — ✅ COMPLETE
+  - Status Table: 9 tasks (T120-T125, T135a-T135b) — ⚠️ PARTIAL (hardcoded URLs, CPU% = 0)
+  - Dashboard View: 9 tasks (T130-T137a) — ✅ COMPLETE (minor issues)
+  - Keyboard Handling: 9 tasks (T140-T146a) — ✅ COMPLETE
+  - Output Streaming: 6 tasks (T150-T155) — ✅ COMPLETE
+  - Status Refresh: 5 tasks (T160-T164) — ❌ NOT STARTED
+  - Error Handling: 3 tasks (T170-T172) — ⚠️ PARTIAL
+  - Integration: 17 tasks (T180-T188f + T180b) — ⚠️ PARTIAL (docs not done, CRITICAL issues)
 - **Phase 3b**: Deferred (to be specified)
 - **Phase 4+**: Deferred (to be specified)
 
-**Total for MVP**: 88 tasks (Phase 1 + 2 + 3a)
+**Total for MVP**: 89 tasks (Phase 1 + 2 + 3a including AUDIT tasks)
 
-**New Enhancements**:
-- ✨ Clickable URLs (T135a-T135b): Click nginx/phpMyAdmin URLs to open in browser
-- 🖱️ Mouse Support (T180a, T146a): Full mouse interaction alongside keyboard
-- 🔐 Double-Confirmation (T144a, T145): Two-step destroy confirmation for safety
-- 📚 Comprehensive Documentation (T107a, T118a, T137a, T188a-f):
-  - User guides in /docs/tui/
-  - Main README.md updates
-  - Inline godoc comments
-  - CHANGELOG.md entries
-  - Architecture documentation
-  - Troubleshooting guides
+**Completion Status (2025-12-30 Audit)**:
+- ✅ **46 tasks complete** (Project Detection, Stack Lifecycle, Dashboard, Keyboard, Streaming)
+- ⚠️ **5 tasks partial** (Status Table URL/CPU, Error Handling)
+- ❌ **16 tasks not started** (Status Refresh, Integration tests, Documentation)
+- 🔴 **4 CRITICAL blockers** (Mouse support, Alt screen, Help component, Task sync)
 
-**Estimated Time for Phase 3a**:
-- Single developer: 20-25 hours
-- Team of 2: 12-15 hours (parallel execution)
-   - Block 12-13: Optional polish + Integration testing
-   - Time estimates: 25-29 hours solo, 14-18 hours with 3 developers
+**Release Blockers**:
+- 🔴 AUDIT-C1: Mouse support NOT enabled - URL clicking non-functional
+- 🔴 AUDIT-C2: Alternate screen mode NOT enabled - clutters terminal
+- 🔴 AUDIT-C3: Help view is hardcoded string, not proper component
+- 🟠 AUDIT-H1: Status refresh timer NOT implemented (FR-035)
+
+**Estimated Remaining Time**:
+- CRITICAL fixes (C1, C2): 30 minutes
+- HIGH fixes (H1-H4): 2-3 hours
+- Documentation (T188a-f): 3-4 hours
+- Integration tests: 2-3 hours
+- **Total to release**: ~8-10 hours remaining
 
 3. **[PHASE3-ADR.md](PHASE3-ADR.md)** - Architecture Decision Records
    - ADR-001: Minimal Container schema (6 fields → extend to 9 in Phase 5)
@@ -1023,77 +1268,4 @@ Each phase delivers testable value:
 
 ---
 
-## Task Summary
 
-- **Total Tasks**: 187 (includes comprehensive testing throughout all phases)
-- **Setup Phase**: 13 tasks (T001-T013) - includes test infrastructure
-- **Foundational Phase**: 17 tasks (T014-T025d) - includes foundation tests + architectural decisions
-- **User Story 2 (Lifecycle) - MVP**: 47 tasks (T026-T072) 🎯 - includes unit + integration tests
-- **User Story 4 (Destroy) - Baseline**: 17 tasks (T073-T089) ✅ - includes regression tests
-- **User Story 1 (Dashboard Enhancement)**: 21 tasks (T090-T110) - includes performance tests
-- **User Story 3 (Logs)**: 27 tasks (T111-T137) - includes streaming tests
-- **User Story 5 (Projects)**: 17 tasks (T138-T154) - includes e2e tests
-- **Polish Phase**: 28 tasks (T155-T182) - includes comprehensive test suite
-
-**Test Coverage Breakdown**:
-- Unit tests: ~30 tasks (Docker client, UI components, message handlers, entities)
-- Integration tests: ~15 tasks (lifecycle workflow, destroy workflow, logs streaming, projects)
-- Performance tests: ~5 tasks (stats refresh, log rendering, startup time, memory usage)
-- E2E tests: ~5 tasks (full user journeys using Bubble Tea test utilities)
-- Manual acceptance tests: ~5 tasks (per user story acceptance criteria)
-- Total test tasks: ~60 (33% of all tasks)
-
-**Parallel Opportunities**:
-- Setup: 4 tasks can run in parallel (Go modules, deps, test mocks)
-- Foundational: 5 tasks can run in parallel (Docker client + tests, root model + tests)
-- User Story 2: 12 tasks can run in parallel (Docker methods + tests, messages + tests, UI + tests)
-- User Story 4: 3 tasks can run in parallel (modal component + tests)
-- User Story 1: 8 tasks can run in parallel (entity/view/stats work + tests)
-- User Story 3: 6 tasks can run in parallel (log streaming + tests)
-- User Story 5: 5 tasks can run in parallel (project detection + tests)
-- Polish: 8 tasks can run in parallel (styling, e2e tests, docs)
-
-**Estimated Time with Testing** (US2+US4 baseline):
-- Single developer: 25-29 hours (includes writing tests + architectural decisions)
-- Team of 3: 12-14 hours (parallel execution after Foundational)
-
-**Test Execution Strategy**:
-- Run unit tests after each component implementation (`go test ./internal/...`)
-- Run integration tests at end of each user story phase
-- Run regression suite after each phase to ensure no breakage
-- Run full test suite (`make test-all`) before merging to main
-- Target: >85% code coverage for production readiness
-
-**Independent Test Criteria**:
-- **US1**: Dashboard displays 4 services with status icons and live CPU/memory bars
-- **US2**: Pressing 's' on apache stops it (gray), pressing again starts (green)
-- **US3**: Pressing 'l' opens logs, 'f' enables follow, new requests appear in real-time
-- **US4**: Pressing 'D' shows warning, typing "yes" removes all volumes and containers
-- **US5**: Pressing 'p' shows project list, selecting switches context, dashboard reloads
-
-**📚 Remember**: Keep `/runbooks/research/QUICK-REFERENCE.md` open while implementing ALL tasks!
-
-**Format Validation**: ✅ All 182 tasks follow strict checklist format:
-- ✅ Checkbox: `- [ ]` prefix on every task
-- ✅ Task ID: T001-T140 sequential (T141-T142 reserved for future)
-- ✅ [P] marker: Only on parallelizable tasks (different files, no blockers)
-- ✅ [Story] label: US1-US5 on all user story phase tasks
-- ✅ File paths: Exact paths included in descriptions (e.g., internal/docker/client.go)
-- ✅ No story label on Setup, Foundational, Polish phases (correct)
-
----
-
-## Notes
-
-- **[P] tasks**: Different files, no dependencies within their phase - can run in parallel
-- **[Story] labels**: Map tasks to user stories for traceability and independent testing
-- **Checkpoints**: Stop after Phase 2, Phase 3, and Phase 6 to validate progress
-- **MVP scope**: Phases 1-4 replicate all 20i-gui CORE functionality (US2 Lifecycle + US4 Destroy) ✅
-- **Enhancements**: Phases 5-7 add monitoring (US1), logs (US3), multi-project (US5) beyond 20i-gui
-- **Production-ready**: Phase 8 adds documentation, error handling, polish
-- **Priority**: GET STACKS RUNNING FIRST (lifecycle), then add nice-to-haves (monitoring/logs)
-- **Tests**: Not included per spec (no TDD requirement, manual testing via quickstart.md)
-- **File organization**: All tasks reference exact file paths from plan.md structure
-- **Bubble Tea patterns**: Tasks follow Elm Architecture (Model-Update-View) per research findings
-- **Docker SDK**: All Docker operations use SDK (no shell commands) per contract
-- **Lipgloss**: All styling uses Lipgloss (no raw ANSI codes) per NFR requirements
