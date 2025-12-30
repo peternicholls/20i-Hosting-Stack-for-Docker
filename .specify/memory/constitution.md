@@ -107,9 +107,25 @@ All PRs require:
 
 ### Commit Hygiene
 - Small, focused commits with clear messages
+- Commits SHOULD be atomic and made often: each commit represents one logical change that can be understood, reviewed, and reverted independently
 - Conventional commits MUST be used for merged PR titles (and SHOULD be used for individual commits): `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
 - Avoid mixing unrelated changes in a single commit
 - Commit messages MUST describe intent and scope (avoid ambiguous messages like `update`)
+
+**What “atomic” means in practice (guidance)**:
+Examples of acceptable atomic commits include:
+- Documentation-only changes (README, CHANGELOG, inline comments)
+- Introducing or modifying a single environment variable and its references
+- Adding or adjusting configuration for one service
+- A single bug fix with no unrelated refactoring
+- A focused refactor that does not change behaviour
+
+Non-atomic examples (to avoid):
+- Feature changes mixed with formatting or lint cleanups
+- Multiple services changed for unrelated reasons
+- Refactors combined with functional changes without clear separation
+
+This guidance exists to support review quality, rollback safety, and effective use of CI and `git bisect`.
 
 ### Repository Hygiene (REQUIRED)
 The repository MUST include and maintain:
